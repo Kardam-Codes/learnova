@@ -526,7 +526,14 @@ export default function LessonPlayerPage() {
   };
 
   useEffect(() => {
-    if (mode && resolvedContentItem.mode !== mode && !(mode === LEARNING_CONTENT_MODE.QUIZ && resolvedContentItem.mode === LEARNING_CONTENT_MODE.QUIZ)) {
+    if (!resolvedContentItem || !mode) {
+      return;
+    }
+
+    if (
+      resolvedContentItem.mode !== mode &&
+      !(mode === LEARNING_CONTENT_MODE.QUIZ && resolvedContentItem.mode === LEARNING_CONTENT_MODE.QUIZ)
+    ) {
       navigate(buildLearningRoute(course.id, resolvedContentItem), { replace: true });
     }
   }, [resolvedContentItem, course.id, mode, navigate]);
@@ -536,7 +543,7 @@ export default function LessonPlayerPage() {
       <div className={`learning-player-frame ${isSidebarOpen ? "" : "is-sidebar-collapsed"}`}>
         <LearningSidebar
           course={course}
-          currentContentId={resolvedContentItem.id}
+          currentContentId={resolvedContentItem?.id ?? contentId}
           isOpen={isSidebarOpen}
           onToggle={() => setIsSidebarOpen((current) => !current)}
         />

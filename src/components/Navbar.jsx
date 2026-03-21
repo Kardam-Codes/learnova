@@ -4,6 +4,7 @@
  * Purpose: Show the shared top navigation across learner-facing pages.
  * What it is: A reusable header with brand identity, learner account state, and theme switching.
  */
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
@@ -48,9 +49,38 @@ export default function Navbar({ brandName, learnerName, theme, toggleTheme }) {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
   const resolvedLearnerName = user?.name ?? learnerName;
+  const [isHidden, setIsHidden] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      const delta = currentScrollY - lastScrollY.current;
+
+      setIsScrolled(currentScrollY > 10);
+
+      if (currentScrollY <= 18) {
+        setIsHidden(false);
+      } else if (delta > 8) {
+        setIsHidden(true);
+      } else if (delta < -6) {
+        setIsHidden(false);
+      }
+
+      lastScrollY.current = currentScrollY;
+    };
+
+    lastScrollY.current = window.scrollY;
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
 
   return (
-    <header className="page-navbar">
+    <header className={`page-navbar${isHidden ? " is-hidden" : ""}${isScrolled ? " is-scrolled" : ""}`}>
       {/* Brand area keeps the product identity visible on learner pages. */}
       <Link className="brand-lockup brand-wordmark-link" to={isAuthenticated ? "/my-courses" : "/auth/login"}>
         <BrandLogoIcon />
