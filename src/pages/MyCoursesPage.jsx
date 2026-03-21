@@ -12,7 +12,7 @@ import ProfilePanel from "../components/ProfilePanel";
 import { learnerProfileMock, myCoursesMock } from "../data/myCoursesMock";
 import { useState } from "react";
 
-export default function MyCoursesPage() {
+export default function MyCoursesPage({ theme, toggleTheme }) {
   const [query, setQuery] = useState("");
   const normalizedQuery = query.trim().toLowerCase();
 
@@ -37,6 +37,8 @@ export default function MyCoursesPage() {
       <Navbar
         brandName="KaiCrypt"
         learnerName={learnerProfileMock.learnerName}
+        theme={theme}
+        toggleTheme={toggleTheme}
       />
 
       <div className="course-page-card my-courses-shell">

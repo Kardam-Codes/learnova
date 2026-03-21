@@ -15,7 +15,10 @@ export default function SearchBar({ value, onChange, placeholder }) {
         aria-label="Search all courses"
       />
       <span className="search-icon" aria-hidden="true">
-        S
+        <svg viewBox="0 0 24 24" className="inline-icon">
+          <circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" strokeWidth="2.4" />
+          <path d="M16 16 21 21" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+        </svg>
       </span>
     </label>
   );
