@@ -9,6 +9,13 @@ import CourseHeader from "../components/CourseHeader";
 import CourseTabs from "../components/CourseTabs";
 import { getCourseDetailMock } from "../data/courseDetailMock";
 import { useParams } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import {
+  fetchCourseDetailRequest,
+  fetchCourseReviewsRequest,
+  submitCourseReviewRequest,
+} from "../utils/apiClient";
+import { useEffect, useState } from "react";
 
 function StarIcon({ filled }) {
   return (
@@ -33,7 +40,68 @@ function ReviewStars({ rating }) {
 
 export default function CourseReviewsPage({ theme, toggleTheme }) {
   const { courseId } = useParams();
-  const course = getCourseDetailMock(courseId);
+  const { token } = useAuth();
+  const [course, setCourse] = useState(() => getCourseDetailMock(courseId));
+  const [reviewDraft, setReviewDraft] = useState(course.reviews.learnerDraft);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewError, setReviewError] = useState("");
+  const [isSavingReview, setIsSavingReview] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCourseReviews = async () => {
+      try {
+        const [courseResponse, reviewsResponse] = await Promise.all([
+          fetchCourseDetailRequest(courseId, token),
+          fetchCourseReviewsRequest(courseId, token),
+        ]);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setCourse({
+          ...courseResponse,
+          reviews: reviewsResponse,
+        });
+        setReviewDraft(reviewsResponse.learnerDraft ?? "");
+      } catch {
+        if (isMounted) {
+          setCourse(getCourseDetailMock(courseId));
+        }
+      }
+    };
+
+    if (token) {
+      loadCourseReviews();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [courseId, token]);
+
+  const handleReviewSubmit = async () => {
+    setIsSavingReview(true);
+    setReviewError("");
+
+    try {
+      const reviewsResponse = await submitCourseReviewRequest(courseId, token, {
+        rating: reviewRating,
+        comment: reviewDraft,
+      });
+
+      setCourse((current) => ({
+        ...current,
+        reviews: reviewsResponse,
+      }));
+    } catch (error) {
+      setReviewError(error.message);
+    } finally {
+      setIsSavingReview(false);
+    }
+  };
 
   return (
     <main className="course-page-shell">
@@ -57,8 +125,13 @@ export default function CourseReviewsPage({ theme, toggleTheme }) {
               <strong>{course.reviews.averageRating.toFixed(1)}</strong>
               <ReviewStars rating={course.reviews.averageRating} />
             </div>
-            <button type="button" className="catalog-action-button is-buy reviews-add-button">
-              Add Review
+            <button
+              type="button"
+              className="catalog-action-button is-buy reviews-add-button"
+              onClick={handleReviewSubmit}
+              disabled={isSavingReview}
+            >
+              {isSavingReview ? "Saving..." : "Add Review"}
             </button>
           </div>
 
@@ -72,11 +145,27 @@ export default function CourseReviewsPage({ theme, toggleTheme }) {
               </div>
               <strong>{course.learnerName}</strong>
             </div>
+            <label className="review-rating-field">
+              <span>Rating</span>
+              <select
+                className="review-rating-select"
+                value={reviewRating}
+                onChange={(event) => setReviewRating(Number(event.target.value))}
+              >
+                {[5, 4, 3, 2, 1].map((ratingOption) => (
+                  <option key={ratingOption} value={ratingOption}>
+                    {ratingOption} Stars
+                  </option>
+                ))}
+              </select>
+            </label>
             <textarea
               className="review-input"
-              defaultValue={course.reviews.learnerDraft}
+              value={reviewDraft}
+              onChange={(event) => setReviewDraft(event.target.value)}
               aria-label="Write your review"
             />
+            {reviewError ? <p className="content-empty">{reviewError}</p> : null}
           </section>
 
           <div className="review-list">

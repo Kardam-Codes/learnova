@@ -32,6 +32,7 @@ export default function SignupPage() {
     role: "learner",
   });
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (isAuthenticated) {
     return <Navigate to="/my-courses" replace />;
@@ -41,9 +42,11 @@ export default function SignupPage() {
     setFormValues((current) => ({ ...current, [fieldName]: value }));
   };
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    const result = signup(formValues);
+    setIsSubmitting(true);
+    const result = await signup(formValues);
+    setIsSubmitting(false);
 
     if (!result.ok) {
       setError(result.error);
@@ -115,8 +118,8 @@ export default function SignupPage() {
             placeholder="Re-enter your password"
           />
           <ErrorMessage message={error} />
-          <button type="submit" className="auth-primary-button">
-            Sign Up
+          <button type="submit" className="auth-primary-button" disabled={isSubmitting}>
+            {isSubmitting ? "Signing Up..." : "Sign Up"}
           </button>
         </form>
 

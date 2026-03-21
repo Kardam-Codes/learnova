@@ -4,20 +4,47 @@
  * Purpose: Render the learner-facing course overview screen for an enrolled course.
  * What it is: Page-level container that wires mock course data into the overview layout and title search.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import CourseHeader from "../components/CourseHeader";
 import CourseTabs from "../components/CourseTabs";
 import ContentSearch from "../components/ContentSearch";
 import ContentList from "../components/ContentList";
+import { useAuth } from "../context/AuthContext";
+import { fetchCourseDetailRequest } from "../utils/apiClient";
 import { getCourseDetailMock } from "../data/courseDetailMock";
 
 export default function CourseDetailPage({ theme, toggleTheme }) {
   const { courseId = "odoo-crm" } = useParams();
+  const { token } = useAuth();
   const [query, setQuery] = useState("");
-  // Mock data is used for now so the UI can be reviewed before backend integration.
-  const course = getCourseDetailMock(courseId);
+  const [course, setCourse] = useState(() => getCourseDetailMock(courseId));
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCourse = async () => {
+      try {
+        const response = await fetchCourseDetailRequest(courseId, token);
+        if (isMounted) {
+          setCourse(response);
+        }
+      } catch {
+        if (isMounted) {
+          setCourse(getCourseDetailMock(courseId));
+        }
+      }
+    };
+
+    if (token) {
+      loadCourse();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [courseId, token]);
 
   // Search only narrows the visible list. Progress numbers remain course-wide.
   const normalizedQuery = query.trim().toLowerCase();

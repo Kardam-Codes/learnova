@@ -1,0 +1,10 @@
+# File: requirements.txt
+# Owner: BOTH CAN ADD
+# Purpose: Capture the Python dependencies required for the new backend API slice.
+# What it is: A minimal requirements file for FastAPI, PostgreSQL access, and local development.
+
+fastapi==0.115.12
+uvicorn[standard]==0.34.0
+psycopg[binary]==3.2.6
+pydantic==2.11.3
+email-validator==2.2.0

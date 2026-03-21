@@ -30,6 +30,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("learner");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const showForgotPassword = location.pathname === "/auth/forgot-password";
 
@@ -37,9 +38,11 @@ export default function LoginPage() {
     return <Navigate to="/my-courses" replace />;
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    const result = login(email, password, role);
+    setIsSubmitting(true);
+    const result = await login(email, password, role);
+    setIsSubmitting(false);
 
     if (!result.ok) {
       setError(result.error);
@@ -100,8 +103,8 @@ export default function LoginPage() {
             options={ROLE_OPTIONS}
           />
           <ErrorMessage message={error} />
-          <button type="submit" className="auth-primary-button">
-            Sign In
+          <button type="submit" className="auth-primary-button" disabled={isSubmitting}>
+            {isSubmitting ? "Signing In..." : "Sign In"}
           </button>
         </form>
 

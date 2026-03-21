@@ -21,7 +21,11 @@ import QuizBuilderPage from "./pages/QuizBuilderPage";
 import LessonContentEditorPage from "./pages/LessonContentEditorPage";
 
 function ProtectedRoute({ children }) {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isAuthReady } = useAuth();
+
+  if (!isAuthReady) {
+    return null;
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/auth/login" replace />;
@@ -62,27 +66,51 @@ export default function App() {
       />
       <Route
         path="/courses/:courseId"
-        element={<CourseDetailPage theme={theme} toggleTheme={toggleTheme} />}
+        element={
+          <ProtectedRoute>
+            <CourseDetailPage theme={theme} toggleTheme={toggleTheme} />
+          </ProtectedRoute>
+        }
       />
       <Route
         path="/courses/:courseId/reviews"
-        element={<CourseReviewsPage theme={theme} toggleTheme={toggleTheme} />}
+        element={
+          <ProtectedRoute>
+            <CourseReviewsPage theme={theme} toggleTheme={toggleTheme} />
+          </ProtectedRoute>
+        }
       />
       <Route
         path="/courses/:courseId/payment"
-        element={<PaymentFlowPage theme={theme} toggleTheme={toggleTheme} />}
+        element={
+          <ProtectedRoute>
+            <PaymentFlowPage theme={theme} toggleTheme={toggleTheme} />
+          </ProtectedRoute>
+        }
       />
       <Route
         path="/courses/:courseId/learn/:contentId/:mode"
-        element={<LessonPlayerPage theme={theme} toggleTheme={toggleTheme} />}
+        element={
+          <ProtectedRoute>
+            <LessonPlayerPage theme={theme} toggleTheme={toggleTheme} />
+          </ProtectedRoute>
+        }
       />
       <Route
         path="/courses/:courseId/learn/:contentId/quiz/question/:questionIndex"
-        element={<LessonPlayerPage theme={theme} toggleTheme={toggleTheme} />}
+        element={
+          <ProtectedRoute>
+            <LessonPlayerPage theme={theme} toggleTheme={toggleTheme} />
+          </ProtectedRoute>
+        }
       />
       <Route
         path="/courses/:courseId/learn/:contentId/quiz/reward"
-        element={<LessonPlayerPage theme={theme} toggleTheme={toggleTheme} />}
+        element={
+          <ProtectedRoute>
+            <LessonPlayerPage theme={theme} toggleTheme={toggleTheme} />
+          </ProtectedRoute>
+        }
       />
 
       {/* Instructor and organiser pages are grouped under a dedicated route prefix. */}

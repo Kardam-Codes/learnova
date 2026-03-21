@@ -9,6 +9,12 @@ import { Suspense, lazy, useEffect, useState } from "react";
 import { getCourseDetailMock } from "../data/courseDetailMock";
 import { buildLearningRoute, buildQuizQuestionRoute, buildQuizRewardRoute } from "../utils/learningRoutes";
 import { LEARNING_CONTENT_MODE } from "../../shared/types/common_types";
+import { useAuth } from "../context/AuthContext";
+import {
+  fetchCourseContentRequest,
+  fetchCourseDetailRequest,
+  submitQuizAttemptRequest,
+} from "../utils/apiClient";
 
 const PDFViewer = lazy(() => import("../components/PDFViewer"));
 
@@ -128,11 +134,11 @@ function LearningFooterAction({ label, to }) {
   );
 }
 
-function QuizChoices({ question, selectedIndex }) {
+function QuizChoices({ question, selectedIndex, onSelect }) {
   return (
     <div className="quiz-options">
       {question.options.map((option, optionIndex) => (
-        <label className="quiz-option" key={option}>
+        <label className="quiz-option" key={option} onClick={() => onSelect(optionIndex)}>
           <span className={`quiz-radio ${selectedIndex === optionIndex ? "is-selected" : ""}`} />
           <span>{option}</span>
         </label>
@@ -156,7 +162,17 @@ function PDFViewerFallback() {
   );
 }
 
-function LearningMainContent({ course, contentItem, questionIndex, pathname }) {
+function LearningMainContent({
+  course,
+  contentItem,
+  questionIndex,
+  pathname,
+  quizSelections,
+  onSelectQuizOption,
+  onSubmitQuizAttempt,
+  quizReward,
+  isSubmittingQuiz,
+}) {
   const questionNumber = questionIndex === null ? null : Number(questionIndex);
   const questions = contentItem.quizQuestions ?? [];
   const currentQuestion = questionNumber === null ? null : questions[questionNumber];
@@ -205,6 +221,8 @@ function LearningMainContent({ course, contentItem, questionIndex, pathname }) {
   }
 
   if (isRewardRoute) {
+    const reward = quizReward ?? contentItem.reward;
+
     return (
       <>
         <div className="learning-reward-overlay">
@@ -215,20 +233,20 @@ function LearningMainContent({ course, contentItem, questionIndex, pathname }) {
               </svg>
             </button>
             <h1>Bingo! You have earned!</h1>
-            <p>{contentItem.reward?.pointsEarned ?? 0} points</p>
+            <p>{reward?.pointsEarned ?? 0} points</p>
             <div className="reward-progress-track">
               <span
                 className="reward-progress-fill"
                 style={{
-                  width: `${Math.min(((contentItem.reward?.pointsEarned ?? 0) / (contentItem.reward?.nextTarget ?? 100)) * 100, 100)}%`,
+                  width: `${Math.min(((reward?.pointsEarned ?? 0) / (reward?.nextTarget ?? 100)) * 100, 100)}%`,
                 }}
               />
             </div>
             <div className="reward-scale">
               <span>5 Points</span>
-              <span>{contentItem.reward?.nextTarget ?? 100} Points</span>
+              <span>{reward?.nextTarget ?? 100} Points</span>
             </div>
-            <p className="reward-message">{contentItem.reward?.message}</p>
+            <p className="reward-message">{reward?.message}</p>
           </section>
         </div>
         <div className="learning-footer-actions">
@@ -265,9 +283,9 @@ function LearningMainContent({ course, contentItem, questionIndex, pathname }) {
 
   const isFinalQuestion = questionNumber === questions.length - 1;
   const proceedLabel = isFinalQuestion ? "Proceed and Complete Quiz" : "Proceed";
-  const proceedTo = isFinalQuestion
-    ? buildQuizRewardRoute(course.id, contentItem.id)
-    : buildQuizQuestionRoute(course.id, contentItem.id, questionNumber + 1);
+  const selectedIndex = currentQuestion
+    ? quizSelections[currentQuestion.id] ?? null
+    : null;
 
   return (
     <>
@@ -279,10 +297,19 @@ function LearningMainContent({ course, contentItem, questionIndex, pathname }) {
           </strong>
         </div>
         <div className="quiz-question-prompt">{currentQuestion?.prompt}</div>
-        <QuizChoices question={currentQuestion} selectedIndex={1} />
-        <Link className="catalog-action-button is-start quiz-main-button" to={proceedTo}>
+        <QuizChoices
+          question={currentQuestion}
+          selectedIndex={selectedIndex}
+          onSelect={(optionIndex) => onSelectQuizOption(currentQuestion.id, optionIndex)}
+        />
+        <button
+          type="button"
+          className="catalog-action-button is-start quiz-main-button"
+          onClick={() => onSubmitQuizAttempt({ isFinalQuestion, questionNumber })}
+          disabled={selectedIndex === null || isSubmittingQuiz}
+        >
           {proceedLabel}
-        </Link>
+        </button>
       </section>
       <div className="learning-footer-actions">
         <LearningFooterAction
@@ -304,31 +331,137 @@ export default function LessonPlayerPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { courseId, contentId, mode, questionIndex } = useParams();
+  const { token } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const course = getCourseDetailMock(courseId);
-  const contentItem = course.contentItems.find((item) => item.id === contentId) ?? course.contentItems[0];
+  const [course, setCourse] = useState(() => getCourseDetailMock(courseId));
+  const [quizSelections, setQuizSelections] = useState({});
+  const [quizReward, setQuizReward] = useState(null);
+  const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false);
+  const [contentOverride, setContentOverride] = useState(null);
 
   useEffect(() => {
-    if (mode && contentItem.mode !== mode && !(mode === LEARNING_CONTENT_MODE.QUIZ && contentItem.mode === LEARNING_CONTENT_MODE.QUIZ)) {
-      navigate(buildLearningRoute(course.id, contentItem), { replace: true });
+    let isMounted = true;
+
+    const loadCourse = async () => {
+      try {
+        const response = await fetchCourseDetailRequest(courseId, token);
+        if (isMounted) {
+          setCourse(response);
+        }
+      } catch {
+        if (isMounted) {
+          setCourse(getCourseDetailMock(courseId));
+        }
+      }
+    };
+
+    if (token) {
+      loadCourse();
     }
-  }, [contentItem, course.id, mode, navigate]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [courseId, token]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadContent = async () => {
+      try {
+        const response = await fetchCourseContentRequest(courseId, contentId, token);
+        if (isMounted) {
+          setContentOverride(response.contentItem);
+        }
+      } catch {
+        if (isMounted) {
+          setContentOverride(null);
+        }
+      }
+    };
+
+    if (token && contentId) {
+      loadContent();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [contentId, courseId, token]);
+
+  const contentItem = course.contentItems.find((item) => item.id === contentId) ?? course.contentItems[0];
+  const resolvedContentItem = contentOverride
+    ? {
+        ...contentItem,
+        ...contentOverride,
+      }
+    : contentItem;
+
+  const handleSelectQuizOption = (questionId, optionIndex) => {
+    setQuizSelections((current) => ({
+      ...current,
+      [questionId]: optionIndex,
+    }));
+  };
+
+  const handleSubmitQuizAttempt = async ({ isFinalQuestion, questionNumber }) => {
+    if (!resolvedContentItem?.quizQuestions) {
+      return;
+    }
+
+    if (!isFinalQuestion) {
+      navigate(
+        buildQuizQuestionRoute(course.id, resolvedContentItem.id, questionNumber + 1),
+      );
+      return;
+    }
+
+    setIsSubmittingQuiz(true);
+
+    try {
+      const response = await submitQuizAttemptRequest(course.id, resolvedContentItem.id, token, {
+        answers: resolvedContentItem.quizQuestions.map((question) => ({
+          questionId: question.id,
+          selectedOptionIndex: quizSelections[question.id],
+        })),
+      });
+
+      setQuizReward(response);
+
+      const refreshedCourse = await fetchCourseDetailRequest(course.id, token);
+      setCourse(refreshedCourse);
+      navigate(buildQuizRewardRoute(course.id, resolvedContentItem.id));
+    } finally {
+      setIsSubmittingQuiz(false);
+    }
+  };
+
+  useEffect(() => {
+    if (mode && resolvedContentItem.mode !== mode && !(mode === LEARNING_CONTENT_MODE.QUIZ && resolvedContentItem.mode === LEARNING_CONTENT_MODE.QUIZ)) {
+      navigate(buildLearningRoute(course.id, resolvedContentItem), { replace: true });
+    }
+  }, [resolvedContentItem, course.id, mode, navigate]);
 
   return (
     <main className="learning-page-shell">
       <div className={`learning-player-frame ${isSidebarOpen ? "" : "is-sidebar-collapsed"}`}>
         <LearningSidebar
           course={course}
-          currentContentId={contentItem.id}
+          currentContentId={resolvedContentItem.id}
           isOpen={isSidebarOpen}
           onToggle={() => setIsSidebarOpen((current) => !current)}
         />
         <section className="learning-main-panel">
           <LearningMainContent
             course={course}
-            contentItem={contentItem}
+            contentItem={resolvedContentItem}
             questionIndex={questionIndex ?? null}
             pathname={location.pathname}
+            quizSelections={quizSelections}
+            onSelectQuizOption={handleSelectQuizOption}
+            onSubmitQuizAttempt={handleSubmitQuizAttempt}
+            quizReward={quizReward}
+            isSubmittingQuiz={isSubmittingQuiz}
           />
         </section>
       </div>

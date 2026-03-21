@@ -7,14 +7,15 @@ BEGIN;
 
 INSERT INTO users (id, name, email, password_hash, role, provider, is_active)
 VALUES
-  ('11111111-1111-1111-1111-111111111111', 'Kardam', 'kardam@learnova.dev', '$2b$12$demo.local.password.hash', 'learner', 'local', TRUE),
-  ('22222222-2222-2222-2222-222222222222', 'Yug', 'yug@learnova.dev', '$2b$12$demo.local.password.hash', 'instructor', 'local', TRUE),
-  ('33333333-3333-3333-3333-333333333333', 'Learnova Admin', 'admin@learnova.dev', '$2b$12$demo.local.password.hash', 'super_admin', 'local', TRUE),
-  ('44444444-4444-4444-4444-444444444444', 'Aman Gupta', 'aman@learnova.dev', '$2b$12$demo.local.password.hash', 'learner', 'local', TRUE)
+  ('11111111-1111-1111-1111-111111111111', 'Kardam', 'kardam@learnova.dev', 'pbkdf2_sha256$600000$3b6b772bdfd7803725e19f6e2315940e$c65bd22fe46cc6af1b0b342e80e12456ab9384585ad7fe7b939c70c071d91d17', 'learner', 'local', TRUE),
+  ('22222222-2222-2222-2222-222222222222', 'Yug', 'yug@learnova.dev', 'pbkdf2_sha256$600000$3b6b772bdfd7803725e19f6e2315940e$c65bd22fe46cc6af1b0b342e80e12456ab9384585ad7fe7b939c70c071d91d17', 'instructor', 'local', TRUE),
+  ('33333333-3333-3333-3333-333333333333', 'Learnova Admin', 'admin@learnova.dev', 'pbkdf2_sha256$600000$3b6b772bdfd7803725e19f6e2315940e$c65bd22fe46cc6af1b0b342e80e12456ab9384585ad7fe7b939c70c071d91d17', 'super_admin', 'local', TRUE),
+  ('44444444-4444-4444-4444-444444444444', 'Aman Gupta', 'aman@learnova.dev', 'pbkdf2_sha256$600000$3b6b772bdfd7803725e19f6e2315940e$c65bd22fe46cc6af1b0b342e80e12456ab9384585ad7fe7b939c70c071d91d17', 'learner', 'local', TRUE)
 ON CONFLICT (id) DO UPDATE
 SET
   name = EXCLUDED.name,
   email = EXCLUDED.email,
+  password_hash = EXCLUDED.password_hash,
   role = EXCLUDED.role,
   provider = EXCLUDED.provider,
   is_active = EXCLUDED.is_active,
