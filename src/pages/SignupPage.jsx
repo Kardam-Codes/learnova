@@ -6,7 +6,7 @@
  */
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { useAuth } from "../context/AuthContext";
+import { getDefaultRouteForRole, useAuth } from "../context/AuthContext";
 import AuthLayout from "../components/AuthLayout";
 import AuthCard from "../components/AuthCard";
 import InputField from "../components/InputField";
@@ -23,7 +23,7 @@ const ROLE_OPTIONS = [
 
 export default function SignupPage() {
   const navigate = useNavigate();
-  const { signup, loginWithGoogle, isAuthenticated } = useAuth();
+  const { signup, loginWithGoogle, isAuthenticated, defaultRoute } = useAuth();
   const [formValues, setFormValues] = useState({
     name: "",
     email: "",
@@ -35,7 +35,7 @@ export default function SignupPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (isAuthenticated) {
-    return <Navigate to="/my-courses" replace />;
+    return <Navigate to={defaultRoute} replace />;
   }
 
   const updateField = (fieldName, value) => {
@@ -65,7 +65,7 @@ export default function SignupPage() {
       return;
     }
 
-    navigate("/my-courses");
+    navigate(getDefaultRouteForRole(formValues.role));
   };
 
   return (

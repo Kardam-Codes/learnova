@@ -12,6 +12,18 @@ const AuthContext = createContext(null);
 const AUTH_SESSION_KEY = "learnova-auth-session";
 const ALLOWED_ROLES = ["learner", "instructor", "admin"];
 
+export function normalizeUserRole(role) {
+  return role === "super_admin" ? "admin" : role;
+}
+
+export function getDefaultRouteForRole(role) {
+  if (!role) {
+    return "/auth/login";
+  }
+
+  return normalizeUserRole(role) === "learner" ? "/my-courses" : "/instructor/courses";
+}
+
 function readStorage(key, fallback) {
   try {
     const value = window.localStorage.getItem(key);
@@ -149,8 +161,12 @@ export function AuthProvider({ children }) {
   };
 
   const value = useMemo(() => {
+    const normalizedRole = normalizeUserRole(session?.user?.role);
+
     return {
       user: session?.user ?? null,
+      userRole: normalizedRole ?? null,
+      defaultRoute: getDefaultRouteForRole(normalizedRole),
       token: session?.token ?? "",
       isAuthenticated: Boolean(session?.isAuthenticated),
       isAuthReady,

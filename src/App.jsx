@@ -6,7 +6,7 @@
  */
 import { useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
-import { useAuth } from "./context/AuthContext";
+import { getDefaultRouteForRole, useAuth } from "./context/AuthContext";
 import LoginPage from "./pages/LoginPage";
 import SignupPage from "./pages/SignupPage";
 import MyCoursesPage from "./pages/MyCoursesPage";
@@ -20,8 +20,8 @@ import ReportingDashboardPage from "./pages/ReportingDashboardPage";
 import QuizBuilderPage from "./pages/QuizBuilderPage";
 import LessonContentEditorPage from "./pages/LessonContentEditorPage";
 
-function ProtectedRoute({ children }) {
-  const { isAuthenticated, isAuthReady } = useAuth();
+function ProtectedRoute({ children, allowedRoles }) {
+  const { isAuthenticated, isAuthReady, userRole } = useAuth();
 
   if (!isAuthReady) {
     return null;
@@ -31,7 +31,25 @@ function ProtectedRoute({ children }) {
     return <Navigate to="/auth/login" replace />;
   }
 
+  if (allowedRoles?.length && !allowedRoles.includes(userRole)) {
+    return <Navigate to={getDefaultRouteForRole(userRole)} replace />;
+  }
+
   return children;
+}
+
+function AppEntryRedirect() {
+  const { isAuthenticated, isAuthReady, userRole } = useAuth();
+
+  if (!isAuthReady) {
+    return null;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/auth/login" replace />;
+  }
+
+  return <Navigate to={getDefaultRouteForRole(userRole)} replace />;
 }
 
 export default function App() {
@@ -55,11 +73,11 @@ export default function App() {
       <Route path="/auth/signup" element={<SignupPage />} />
       <Route path="/auth/forgot-password" element={<LoginPage />} />
 
-      <Route path="/" element={<Navigate to="/my-courses" replace />} />
+      <Route path="/" element={<AppEntryRedirect />} />
       <Route
         path="/my-courses"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["learner"]}>
             <MyCoursesPage theme={theme} toggleTheme={toggleTheme} />
           </ProtectedRoute>
         }
@@ -67,7 +85,7 @@ export default function App() {
       <Route
         path="/courses/:courseId"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["learner"]}>
             <CourseDetailPage theme={theme} toggleTheme={toggleTheme} />
           </ProtectedRoute>
         }
@@ -75,7 +93,7 @@ export default function App() {
       <Route
         path="/courses/:courseId/reviews"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["learner"]}>
             <CourseReviewsPage theme={theme} toggleTheme={toggleTheme} />
           </ProtectedRoute>
         }
@@ -83,7 +101,7 @@ export default function App() {
       <Route
         path="/courses/:courseId/payment"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["learner"]}>
             <PaymentFlowPage theme={theme} toggleTheme={toggleTheme} />
           </ProtectedRoute>
         }
@@ -91,7 +109,7 @@ export default function App() {
       <Route
         path="/courses/:courseId/learn/:contentId/:mode"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["learner"]}>
             <LessonPlayerPage theme={theme} toggleTheme={toggleTheme} />
           </ProtectedRoute>
         }
@@ -99,7 +117,7 @@ export default function App() {
       <Route
         path="/courses/:courseId/learn/:contentId/quiz/question/:questionIndex"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["learner"]}>
             <LessonPlayerPage theme={theme} toggleTheme={toggleTheme} />
           </ProtectedRoute>
         }
@@ -107,7 +125,7 @@ export default function App() {
       <Route
         path="/courses/:courseId/learn/:contentId/quiz/reward"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["learner"]}>
             <LessonPlayerPage theme={theme} toggleTheme={toggleTheme} />
           </ProtectedRoute>
         }
@@ -117,7 +135,7 @@ export default function App() {
       <Route
         path="/instructor"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["admin", "instructor"]}>
             <Navigate to="/instructor/courses" replace />
           </ProtectedRoute>
         }
@@ -125,7 +143,7 @@ export default function App() {
       <Route
         path="/instructor/courses"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["admin", "instructor"]}>
             <InstructorDashboard theme={theme} toggleTheme={toggleTheme} />
           </ProtectedRoute>
         }
@@ -133,7 +151,7 @@ export default function App() {
       <Route
         path="/instructor/courses/:courseId/edit"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["admin", "instructor"]}>
             <CourseConfig theme={theme} toggleTheme={toggleTheme} />
           </ProtectedRoute>
         }
@@ -141,7 +159,7 @@ export default function App() {
       <Route
         path="/instructor/reports"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["admin", "instructor"]}>
             <ReportingDashboardPage theme={theme} toggleTheme={toggleTheme} />
           </ProtectedRoute>
         }
@@ -149,7 +167,7 @@ export default function App() {
       <Route
         path="/instructor/quizzes/:quizId/builder"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["admin", "instructor"]}>
             <QuizBuilderPage theme={theme} toggleTheme={toggleTheme} />
           </ProtectedRoute>
         }
@@ -157,7 +175,7 @@ export default function App() {
       <Route
         path="/instructor/content/:contentId/edit"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={["admin", "instructor"]}>
             <LessonContentEditorPage theme={theme} toggleTheme={toggleTheme} />
           </ProtectedRoute>
         }

@@ -6,7 +6,7 @@
  */
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { useAuth } from "../context/AuthContext";
+import { getDefaultRouteForRole, useAuth } from "../context/AuthContext";
 import AuthLayout from "../components/AuthLayout";
 import AuthCard from "../components/AuthCard";
 import InputField from "../components/InputField";
@@ -25,7 +25,7 @@ const ROLE_OPTIONS = [
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, loginWithGoogle, isAuthenticated } = useAuth();
+  const { login, loginWithGoogle, isAuthenticated, user, defaultRoute } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("learner");
@@ -35,7 +35,7 @@ export default function LoginPage() {
   const showForgotPassword = location.pathname === "/auth/forgot-password";
 
   if (isAuthenticated) {
-    return <Navigate to="/my-courses" replace />;
+    return <Navigate to={defaultRoute} replace />;
   }
 
   const handleSubmit = async (event) => {
@@ -50,7 +50,7 @@ export default function LoginPage() {
     }
 
     setError("");
-    navigate("/my-courses");
+    navigate(getDefaultRouteForRole(role));
   };
 
   const handleGoogleSuccess = (profile) => {
@@ -61,7 +61,7 @@ export default function LoginPage() {
       return;
     }
 
-    navigate("/my-courses");
+    navigate(getDefaultRouteForRole(user?.role ?? role));
   };
 
   return (
