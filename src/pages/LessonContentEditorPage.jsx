@@ -105,6 +105,41 @@ function ContentVariantFields({ content }) {
   );
 }
 
+function DescriptionTab({ content }) {
+  return (
+    <section className="editor-description-shell">
+      {/* This textarea keeps the page editable while visually matching the large empty writing area from the mockup. */}
+      <textarea
+        className="editor-description-textarea"
+        defaultValue={content.description}
+        aria-label="Content description"
+      />
+    </section>
+  );
+}
+
+function AdditionalAttachmentTab({ content }) {
+  return (
+    <section className="attachment-panel attachment-panel-compact">
+      <div className="attachment-form-row">
+        <label className="instructor-field instructor-field-short attachment-field">
+          <span>File :</span>
+          <input type="text" defaultValue={content.attachmentFile} />
+        </label>
+
+        <button type="button" className="catalog-action-button instructor-cta-button attachment-upload-button">
+          Upload your file
+        </button>
+      </div>
+
+      <label className="instructor-field instructor-field-short attachment-field">
+        <span>Link :</span>
+        <input type="text" defaultValue={content.attachmentLink} />
+      </label>
+    </section>
+  );
+}
+
 export default function LessonContentEditorPage() {
   const { contentId = "video-advanced-sales" } = useParams();
   const content = useMemo(() => getContentEditorMock(contentId), [contentId]);
@@ -117,7 +152,7 @@ export default function LessonContentEditorPage() {
       <div className="course-page-card instructor-shell">
         <section className="content-editor-shell">
           <header className="content-editor-header">
-            <span className="eyebrow">Content title</span>
+            <span className="content-editor-label">Content title</span>
             <h1>{content.title}</h1>
           </header>
 
@@ -136,32 +171,9 @@ export default function LessonContentEditorPage() {
 
           <section className="instructor-panel content-editor-panel">
             {activeTab === "Content" ? <ContentVariantFields content={content} /> : null}
-
-            {activeTab === "Description" ? (
-              <label className="instructor-textarea-field">
-                <span>Write your content description here...</span>
-                <textarea defaultValue={content.description} rows="10" />
-              </label>
-            ) : null}
-
+            {activeTab === "Description" ? <DescriptionTab content={content} /> : null}
             {activeTab === "Additional attachment" ? (
-              <div className="attachment-panel">
-                <div className="upload-row">
-                  <label className="instructor-field instructor-field-short">
-                    <span>File :</span>
-                    <input type="text" defaultValue={content.attachmentFile} />
-                  </label>
-
-                  <button type="button" className="catalog-action-button instructor-cta-button">
-                    Upload your file
-                  </button>
-                </div>
-
-                <label className="instructor-field instructor-field-short">
-                  <span>Link :</span>
-                  <input type="text" defaultValue={content.attachmentLink} />
-                </label>
-              </div>
+              <AdditionalAttachmentTab content={content} />
             ) : null}
           </section>
         </section>

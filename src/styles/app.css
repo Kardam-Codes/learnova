@@ -3337,3 +3337,73 @@ img {
     grid-template-columns: 1fr;
   }
 }
+
+/* Lesson editor refinements for description and attachment tabs */
+.content-editor-label {
+  display: inline-flex;
+  margin-bottom: 18px;
+  color: #d68516;
+  font-family: Manrope, "Segoe UI", sans-serif;
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.editor-description-shell {
+  min-height: 360px;
+}
+
+.editor-description-textarea {
+  width: 100%;
+  min-height: 320px;
+  border: 0;
+  background: transparent;
+  color: #58a8ff;
+  font: inherit;
+  font-size: 1.02rem;
+  line-height: 1.7;
+  resize: vertical;
+}
+
+.editor-description-textarea:focus {
+  outline: none;
+}
+
+.editor-description-textarea::placeholder {
+  color: #58a8ff;
+}
+
+.attachment-panel-compact {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 22px;
+  padding-top: 8px;
+}
+
+.attachment-form-row {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+
+.attachment-field {
+  max-width: 320px;
+}
+
+.attachment-field input {
+  background: transparent;
+  border-width: 0 0 4px;
+  padding: 8px 0;
+  box-shadow: none;
+}
+
+.attachment-field input:focus {
+  background: transparent;
+  color: var(--cyan);
+  box-shadow: none;
+}
+
+.attachment-upload-button {
+  min-width: 180px;
+}
