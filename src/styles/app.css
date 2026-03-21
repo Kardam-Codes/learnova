@@ -3431,7 +3431,8 @@ img {
   font-weight: 800;
 }
 
-.editor-line-field input {
+.editor-line-field input,
+.editor-line-field select {
   flex: 1;
   border-width: 0 0 4px;
   background: transparent;
@@ -3440,7 +3441,8 @@ img {
   box-shadow: none;
 }
 
-.editor-line-field input:focus {
+.editor-line-field input:focus,
+.editor-line-field select:focus {
   background: transparent;
   color: var(--cyan);
   box-shadow: none;

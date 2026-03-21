@@ -10,6 +10,8 @@ What it is: PostgreSQL-backed service helpers for course administration APIs.
 from __future__ import annotations
 
 import re
+from pathlib import Path
+from uuid import uuid4
 from collections import defaultdict
 from typing import Any
 
@@ -17,6 +19,8 @@ from fastapi import HTTPException, status
 
 from backend.config.db import connect
 from backend.config.security import hash_password
+
+UPLOADS_ROOT = Path(__file__).resolve().parents[2] / "uploads"
 
 
 def _fetch_rows(cursor, query: str, params: tuple = ()) -> list[dict[str, Any]]:
@@ -33,6 +37,11 @@ def _fetch_one(cursor, query: str, params: tuple = ()) -> dict[str, Any] | None:
 def _slugify(text: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", text.strip().lower()).strip("-")
     return slug or "course"
+
+
+def _safe_filename(filename: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "-", filename).strip("-")
+    return cleaned or "upload.bin"
 
 
 def _ensure_unique_course_slug(cursor, base_slug: str, exclude_course_id: str | None = None) -> str:
@@ -389,6 +398,72 @@ def list_admin_courses(_current_user: dict) -> dict[str, Any]:
             courses = [_serialize_course(cursor, row["slug"]) for row in course_rows]
 
     return {"courses": courses}
+
+
+def list_admin_users(roles: list[str] | None = None) -> dict[str, Any]:
+    allowed_roles = {"super_admin", "admin", "instructor", "learner"}
+    requested_roles = [role for role in (roles or ["super_admin", "admin", "instructor"]) if role in allowed_roles]
+    if not requested_roles:
+        requested_roles = ["super_admin", "admin", "instructor"]
+
+    placeholders = ", ".join(["%s"] * len(requested_roles))
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            user_rows = _fetch_rows(
+                cursor,
+                f"""
+                SELECT id, name, email, role, is_active
+                FROM users
+                WHERE role IN ({placeholders})
+                ORDER BY
+                  CASE role
+                    WHEN 'super_admin' THEN 1
+                    WHEN 'admin' THEN 2
+                    WHEN 'instructor' THEN 3
+                    ELSE 4
+                  END,
+                  name ASC;
+                """,
+                tuple(requested_roles),
+            )
+
+    return {
+        "users": [
+            {
+                "id": str(row["id"]),
+                "name": row["name"],
+                "email": row["email"],
+                "role": row["role"],
+                "isActive": bool(row["is_active"]),
+            }
+            for row in user_rows
+        ]
+    }
+
+
+def save_admin_upload(file_name: str, file_bytes: bytes, category: str, base_url: str) -> dict[str, Any]:
+    if not file_bytes:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty.")
+
+    normalized_category = _slugify(category or "misc")
+    target_dir = UPLOADS_ROOT / normalized_category
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    safe_name = _safe_filename(file_name)
+    stored_name = f"{uuid4().hex}-{safe_name}"
+    target_path = target_dir / stored_name
+    target_path.write_bytes(file_bytes)
+
+    relative_url = f"/uploads/{normalized_category}/{stored_name}"
+    return {
+        "fileName": safe_name,
+        "storedName": stored_name,
+        "category": normalized_category,
+        "url": f"{base_url.rstrip('/')}{relative_url}",
+        "relativeUrl": relative_url,
+        "size": len(file_bytes),
+    }
 
 
 def get_admin_course(course_slug: str) -> dict[str, Any]:

@@ -7,13 +7,19 @@ Purpose: Boot the backend API application for Learnova.
 What it is: A FastAPI entrypoint with health checks and the initial auth routes.
 """
 
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from backend.modules.admin.router import router as admin_router
 from backend.modules.auth.router import router as auth_router
 from backend.modules.courses.router import router as course_router
 
+ROOT_DIR = Path(__file__).resolve().parent
+UPLOADS_DIR = ROOT_DIR / "uploads"
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 # This creates the shared FastAPI app instance used by local development and future deployment.
 app = FastAPI(
@@ -63,3 +69,4 @@ def health():
 app.include_router(auth_router)
 app.include_router(course_router)
 app.include_router(admin_router)
+app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")

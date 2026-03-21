@@ -13,7 +13,9 @@ import {
   createAdminCourseContentRequest,
   deleteAdminContentRequest,
   fetchAdminContentRequest,
+  fetchAdminUsersRequest,
   updateAdminContentRequest,
+  uploadAdminFileRequest,
 } from "../utils/apiClient";
 
 const editorTabs = ["Content", "Description", "Additional attachment"];
@@ -81,7 +83,26 @@ function ContentCategorySelector({ selectedType, onChange }) {
   );
 }
 
-function VideoContentFields({ content, updateField }) {
+function ResponsibleField({ content, updateField, adminUsers }) {
+  return (
+    <label className="editor-line-field">
+      <span>Responsible :</span>
+      <select
+        value={content.responsibleUserId ?? ""}
+        onChange={(event) => updateField("responsibleUserId", event.target.value || null)}
+      >
+        <option value="">Unassigned</option>
+        {adminUsers.map((user) => (
+          <option key={user.id} value={user.id}>
+            {user.name} ({user.role})
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function VideoContentFields({ content, updateField, adminUsers }) {
   return (
     <section className="content-variant-shell">
       <ContentCategorySelector
@@ -99,14 +120,7 @@ function VideoContentFields({ content, updateField }) {
       </label>
 
       <div className="content-variant-footer-grid">
-        <label className="editor-line-field">
-          <span>Responsible :</span>
-          <input
-            type="text"
-            value={content.responsible}
-            onChange={(event) => updateField("responsible", event.target.value)}
-          />
-        </label>
+        <ResponsibleField content={content} updateField={updateField} adminUsers={adminUsers} />
 
         <label className="editor-line-field">
           <span>Duration :</span>
@@ -121,7 +135,14 @@ function VideoContentFields({ content, updateField }) {
   );
 }
 
-function FileBasedContentFields({ content, label, updateField }) {
+function FileBasedContentFields({
+  content,
+  label,
+  updateField,
+  adminUsers,
+  onUploadAsset,
+  isUploadingAsset,
+}) {
   return (
     <section className="content-variant-shell">
       <ContentCategorySelector
@@ -139,20 +160,14 @@ function FileBasedContentFields({ content, label, updateField }) {
           />
         </label>
 
-        <button type="button" className="catalog-action-button instructor-cta-button content-upload-button">
-          Paste URL
-        </button>
+        <label className="catalog-action-button instructor-cta-button content-upload-button">
+          {isUploadingAsset ? "Uploading..." : "Upload File"}
+          <input type="file" hidden onChange={onUploadAsset} disabled={isUploadingAsset} />
+        </label>
       </div>
 
       <div className="content-variant-footer-grid">
-        <label className="editor-line-field">
-          <span>Responsible :</span>
-          <input
-            type="text"
-            value={content.responsible}
-            onChange={(event) => updateField("responsible", event.target.value)}
-          />
-        </label>
+        <ResponsibleField content={content} updateField={updateField} adminUsers={adminUsers} />
 
         <label className="toggle-field content-download-toggle">
           <span>Allow Download :</span>
@@ -167,9 +182,21 @@ function FileBasedContentFields({ content, label, updateField }) {
   );
 }
 
-function ContentVariantFields({ content, updateField }) {
+function ContentVariantFields({
+  content,
+  updateField,
+  adminUsers,
+  onUploadAsset,
+  isUploadingAsset,
+}) {
   if (content.type === "Video") {
-    return <VideoContentFields content={content} updateField={updateField} />;
+    return (
+      <VideoContentFields
+        content={content}
+        updateField={updateField}
+        adminUsers={adminUsers}
+      />
+    );
   }
 
   if (content.type === "Document") {
@@ -178,15 +205,21 @@ function ContentVariantFields({ content, updateField }) {
         content={content}
         label="Document file:"
         updateField={updateField}
+        adminUsers={adminUsers}
+        onUploadAsset={onUploadAsset}
+        isUploadingAsset={isUploadingAsset}
       />
     );
   }
 
   return (
-    <FileBasedContentFields
+      <FileBasedContentFields
       content={content}
       label="Image file :"
       updateField={updateField}
+      adminUsers={adminUsers}
+      onUploadAsset={onUploadAsset}
+      isUploadingAsset={isUploadingAsset}
     />
   );
 }
@@ -204,7 +237,7 @@ function DescriptionTab({ content, updateField }) {
   );
 }
 
-function AdditionalAttachmentTab({ content, updateField }) {
+function AdditionalAttachmentTab({ content, updateField, onUploadAttachment, isUploadingAttachment }) {
   return (
     <section className="attachment-panel attachment-panel-compact">
       <div className="attachment-form-row">
@@ -217,9 +250,10 @@ function AdditionalAttachmentTab({ content, updateField }) {
           />
         </label>
 
-        <button type="button" className="catalog-action-button instructor-cta-button attachment-upload-button">
-          Upload your file
-        </button>
+        <label className="catalog-action-button instructor-cta-button attachment-upload-button">
+          {isUploadingAttachment ? "Uploading..." : "Upload your file"}
+          <input type="file" hidden onChange={onUploadAttachment} disabled={isUploadingAttachment} />
+        </label>
       </div>
 
       <label className="instructor-field instructor-field-short attachment-field">
@@ -246,8 +280,11 @@ export default function LessonContentEditorPage() {
     duration: fallbackContent.duration ?? "",
   }));
   const [activeTab, setActiveTab] = useState("Content");
+  const [adminUsers, setAdminUsers] = useState([]);
   const [statusMessage, setStatusMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingAsset, setIsUploadingAsset] = useState(false);
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
   const isNewContent = contentId === "new-content";
 
   useEffect(() => {
@@ -255,6 +292,16 @@ export default function LessonContentEditorPage() {
 
     const loadContent = async () => {
       if (isNewContent) {
+        try {
+          const userResponse = await fetchAdminUsersRequest(token, ["super_admin", "admin", "instructor"]);
+          if (isMounted) {
+            setAdminUsers(userResponse.users);
+          }
+        } catch (error) {
+          if (isMounted) {
+            setStatusMessage(error.message);
+          }
+        }
         setContent({
           id: "new-content",
           title: "",
@@ -272,9 +319,13 @@ export default function LessonContentEditorPage() {
       }
 
       try {
-        const response = await fetchAdminContentRequest(contentId, token);
+        const [response, userResponse] = await Promise.all([
+          fetchAdminContentRequest(contentId, token),
+          fetchAdminUsersRequest(token, ["super_admin", "admin", "instructor"]),
+        ]);
         if (isMounted) {
           setContent(buildEditorState(response));
+          setAdminUsers(userResponse.users);
         }
       } catch (error) {
         if (isMounted) {
@@ -301,6 +352,26 @@ export default function LessonContentEditorPage() {
       ...current,
       [fieldName]: value,
     }));
+  };
+
+  const handleUpload = async (file, category, fieldName) => {
+    if (!file) {
+      return;
+    }
+
+    const setUploading = fieldName === "attachmentFile" ? setIsUploadingAttachment : setIsUploadingAsset;
+    setUploading(true);
+    setStatusMessage("");
+
+    try {
+      const response = await uploadAdminFileRequest(token, file, category);
+      updateField(fieldName, response.url);
+      setStatusMessage(`${file.name} uploaded successfully.`);
+    } catch (error) {
+      setStatusMessage(error.message);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const buildPayload = () => {
@@ -432,14 +503,29 @@ export default function LessonContentEditorPage() {
                     onChange={(event) => updateField("title", event.target.value)}
                   />
                 </label>
-                <ContentVariantFields content={content} updateField={updateField} />
+                <ContentVariantFields
+                  content={content}
+                  updateField={updateField}
+                  adminUsers={adminUsers}
+                  onUploadAsset={(event) =>
+                    handleUpload(event.target.files?.[0], "content-assets", "videoLink")
+                  }
+                  isUploadingAsset={isUploadingAsset}
+                />
               </section>
             ) : null}
             {activeTab === "Description" ? (
               <DescriptionTab content={content} updateField={updateField} />
             ) : null}
             {activeTab === "Additional attachment" ? (
-              <AdditionalAttachmentTab content={content} updateField={updateField} />
+              <AdditionalAttachmentTab
+                content={content}
+                updateField={updateField}
+                onUploadAttachment={(event) =>
+                  handleUpload(event.target.files?.[0], "content-attachments", "attachmentFile")
+                }
+                isUploadingAttachment={isUploadingAttachment}
+              />
             ) : null}
           </section>
         </section>

@@ -9,7 +9,7 @@ What it is: FastAPI routes for course CRUD, publish toggles, and attendee invita
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
 
 from backend.modules.admin.schemas import (
     AddAttendeesRequest,
@@ -33,10 +33,12 @@ from backend.modules.admin.service import (
     get_content_detail,
     get_quiz_detail,
     get_reporting_course_progress,
+    list_admin_users,
     list_admin_courses,
     list_course_content,
     list_course_attendees,
     list_course_quizzes,
+    save_admin_upload,
     set_course_publish_state,
     update_course_content,
     update_quiz_detail,
@@ -61,6 +63,34 @@ def get_course_progress_report(
     """
 
     return get_reporting_course_progress(status)
+
+
+@router.get("/users")
+def get_admin_users(
+    roles: str | None = None,
+    _current_user: dict = Depends(AdminOrInstructor),
+):
+    """
+    This returns admin/instructor user records for responsible-user dropdowns.
+    """
+
+    role_list = [role.strip() for role in roles.split(",")] if roles else None
+    return list_admin_users(role_list)
+
+
+@router.post("/uploads")
+async def upload_admin_file(
+    request: Request,
+    category: str = Form("attachments"),
+    file: UploadFile = File(...),
+    _current_user: dict = Depends(AdminOrInstructor),
+):
+    """
+    This stores a local uploaded asset and returns its served URL.
+    """
+
+    file_bytes = await file.read()
+    return save_admin_upload(file.filename or "upload.bin", file_bytes, category, str(request.base_url))
 
 
 @router.get("/courses")

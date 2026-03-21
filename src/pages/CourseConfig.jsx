@@ -16,12 +16,12 @@ import {
   fetchAdminCourseContentRequest,
   fetchAdminCourseQuizzesRequest,
   fetchAdminCourseRequest,
+  fetchAdminUsersRequest,
   publishAdminCourseRequest,
   updateAdminCourseRequest,
 } from "../utils/apiClient";
 
 const tabs = ["Content", "Description", "Options", "Quiz"];
-const courseAdmins = ["Yug", "Salman Khan", "Kardam"];
 
 const emptyCourse = {
   slug: "new-course",
@@ -94,6 +94,7 @@ export default function CourseConfig() {
   const [contentItems, setContentItems] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
   const [attendees, setAttendees] = useState([]);
+  const [adminUsers, setAdminUsers] = useState([]);
   const [statusMessage, setStatusMessage] = useState("");
   const [loadError, setLoadError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -111,16 +112,28 @@ export default function CourseConfig() {
         setContentItems([]);
         setQuizzes([]);
         setAttendees([]);
+        try {
+          const userResponse = await fetchAdminUsersRequest(token, ["super_admin", "admin", "instructor"]);
+          if (isMounted) {
+            setAdminUsers(userResponse.users);
+            setLoadError("");
+          }
+        } catch (error) {
+          if (isMounted) {
+            setLoadError(error.message);
+          }
+        }
         return;
       }
 
       try {
-        const [courseResponse, contentResponse, quizResponse, attendeeResponse] =
+        const [courseResponse, contentResponse, quizResponse, attendeeResponse, userResponse] =
           await Promise.all([
             fetchAdminCourseRequest(courseId, token),
             fetchAdminCourseContentRequest(courseId, token),
             fetchAdminCourseQuizzesRequest(courseId, token),
             fetchAdminCourseAttendeesRequest(courseId, token),
+            fetchAdminUsersRequest(token, ["super_admin", "admin", "instructor"]),
           ]);
 
         if (!isMounted) {
@@ -131,6 +144,7 @@ export default function CourseConfig() {
         setContentItems(contentResponse.contentItems);
         setQuizzes(quizResponse.quizzes);
         setAttendees(attendeeResponse.attendees);
+        setAdminUsers(userResponse.users);
         setLoadError("");
       } catch (error) {
         if (!isMounted) {
@@ -507,9 +521,9 @@ export default function CourseConfig() {
                       onChange={(event) => updateField("responsibleUserId", event.target.value || null)}
                     >
                       <option value="">Unassigned</option>
-                      {courseAdmins.map((admin) => (
-                        <option key={admin} value="">
-                          {admin}
+                      {adminUsers.map((admin) => (
+                        <option key={admin.id} value={admin.id}>
+                          {admin.name} ({admin.role})
                         </option>
                       ))}
                     </select>

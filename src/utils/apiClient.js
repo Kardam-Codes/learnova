@@ -29,6 +29,10 @@ function buildHeaders(token) {
   };
 }
 
+function buildAuthHeaders(token) {
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export async function loginRequest(payload) {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",
@@ -128,6 +132,15 @@ export async function submitQuizAttemptRequest(courseId, contentId, token, paylo
 
 export async function fetchAdminCoursesRequest(token) {
   const response = await fetch(`${API_BASE_URL}/admin/courses`, {
+    headers: buildHeaders(token),
+  });
+
+  return parseJsonResponse(response);
+}
+
+export async function fetchAdminUsersRequest(token, roles) {
+  const query = roles?.length ? `?roles=${encodeURIComponent(roles.join(","))}` : "";
+  const response = await fetch(`${API_BASE_URL}/admin/users${query}`, {
     headers: buildHeaders(token),
   });
 
@@ -284,6 +297,20 @@ export async function fetchAdminCourseProgressReportRequest(token, status) {
   const query = status ? `?status=${encodeURIComponent(status)}` : "";
   const response = await fetch(`${API_BASE_URL}/admin/reports/course-progress${query}`, {
     headers: buildHeaders(token),
+  });
+
+  return parseJsonResponse(response);
+}
+
+export async function uploadAdminFileRequest(token, file, category = "attachments") {
+  const formData = new FormData();
+  formData.append("category", category);
+  formData.append("file", file);
+
+  const response = await fetch(`${API_BASE_URL}/admin/uploads`, {
+    method: "POST",
+    headers: buildAuthHeaders(token),
+    body: formData,
   });
 
   return parseJsonResponse(response);
