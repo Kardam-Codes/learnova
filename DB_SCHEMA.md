@@ -8,6 +8,9 @@ This document defines the **target database shape** for Learnova based on:
 
 This is a logical schema guide, not a finalized migration file.
 
+Concrete SQL version:
+- `backend/db/schema.sql`
+
 ---
 
 ## 1. users
@@ -316,3 +319,26 @@ This may be implemented through a query/view rather than a dedicated table.
 - one `user` has progress across many courses and content items
 - one `user` has many quiz attempts
 - one `user` accumulates many point events
+
+---
+
+## SQL Implementation
+
+The first concrete database implementation now exists at:
+
+```plaintext
+backend/db/schema.sql
+```
+
+Current assumption:
+- PostgreSQL
+
+It includes:
+- enum types
+- table definitions
+- primary keys
+- foreign keys
+- check constraints
+- unique constraints
+- indexes
+- a reporting view for course-wise learner progress
