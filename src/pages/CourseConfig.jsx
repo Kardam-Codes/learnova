@@ -65,14 +65,14 @@ export default function CourseConfig() {
             </div>
           </div>
 
-          <div className="course-config-hero">
+          <div className="course-config-hero course-config-hero-compact">
             <div className="course-config-copy">
-              <label className="instructor-field">
+              <label className="instructor-field instructor-field-line">
                 <span>Course Title:</span>
                 <input type="text" defaultValue={course.title} />
               </label>
 
-              <label className="instructor-field">
+              <label className="instructor-field instructor-field-line">
                 <span>Tags:</span>
                 <input type="text" defaultValue={course.tags.join(", ")} />
               </label>
@@ -173,11 +173,11 @@ export default function CourseConfig() {
             ) : null}
 
             {activeTab === "Options" ? (
-              <section className="options-panel-grid options-panel-grid-annotated">
-                <div className="option-box option-box-annotated">
+              <section className="options-panel-grid options-panel-grid-sketched">
+                <div className="option-box option-box-sketched option-box-left">
                   <h3>Access course rights</h3>
 
-                  <label className="instructor-field options-select-field">
+                  <label className="instructor-field options-select-field options-select-field-sketched">
                     <span>Show course to:</span>
                     <select defaultValue={course.visibility}>
                       <option>Everyone</option>
@@ -185,7 +185,7 @@ export default function CourseConfig() {
                     </select>
                   </label>
 
-                  <div className="options-checkbox-row options-checkbox-row-annotated">
+                  <div className="options-checkbox-row options-checkbox-row-sketched">
                     <span>Access rules:</span>
                     <label>
                       <input type="checkbox" defaultChecked={course.accessRules.open} />
@@ -198,22 +198,26 @@ export default function CourseConfig() {
                       />
                       <span>On Invitation</span>
                     </label>
-                    <label>
+                    <label className="options-payment-row">
                       <input type="checkbox" defaultChecked={course.accessRules.payment} />
                       <span>On Payment</span>
                     </label>
+                    <label className="instructor-field option-price-field-sketched">
+                      <span>Price:</span>
+                      <input type="text" defaultValue={course.price} />
+                    </label>
                   </div>
-
-                  <label className="instructor-field instructor-field-short option-price-field">
-                    <span>Price:</span>
-                    <input type="text" defaultValue={course.price} />
-                  </label>
                 </div>
 
-                <div className="option-box option-box-annotated">
+                <div className="option-box option-box-sketched option-box-right">
                   <h3>Responsible</h3>
 
-                  <label className="instructor-field options-select-field options-admin-field">
+                  <label className="instructor-field instructor-field-line options-responsible-field">
+                    <span>Responsible:</span>
+                    <input type="text" defaultValue={course.responsible} />
+                  </label>
+
+                  <label className="instructor-field options-admin-field options-admin-field-sketched">
                     <span>Course Admin:</span>
                     <select defaultValue={course.courseAdmin}>
                       {courseAdmins.map((admin) => (
