@@ -1,8 +1,8 @@
 /*
  * File: App.jsx
- * Owner: KARDAM
- * Purpose: Define the learner frontend route map.
- * What it is: The top-level React router configuration and shared theme controller for learner pages.
+ * Owner: BOTH CAN ADD
+ * Purpose: Define the full frontend route map for learner and instructor flows.
+ * What it is: The top-level React router configuration and shared theme controller for learner and instructor pages.
  */
 import { useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
@@ -14,6 +14,11 @@ import CourseDetailPage from "./pages/CourseDetailPage";
 import CourseReviewsPage from "./pages/CourseReviewsPage";
 import LessonPlayerPage from "./pages/LessonPlayerPage";
 import PaymentFlowPage from "./pages/PaymentFlowPage";
+import InstructorDashboard from "./pages/InstructorDashboard";
+import CourseConfig from "./pages/CourseConfig";
+import ReportingDashboardPage from "./pages/ReportingDashboardPage";
+import QuizBuilderPage from "./pages/QuizBuilderPage";
+import LessonContentEditorPage from "./pages/LessonContentEditorPage";
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated } = useAuth();
@@ -26,7 +31,7 @@ function ProtectedRoute({ children }) {
 }
 
 export default function App() {
-  // Light mode is the default, but learners can switch to dark mode from the navbar.
+  // Light mode is the default, but users can switch themes from the shared navbar.
   const [theme, setTheme] = useState(() => {
     return window.localStorage.getItem("learnova-theme") ?? "light";
   });
@@ -45,9 +50,8 @@ export default function App() {
       <Route path="/auth/login" element={<LoginPage />} />
       <Route path="/auth/signup" element={<SignupPage />} />
       <Route path="/auth/forgot-password" element={<LoginPage />} />
-      {/* Default entry goes to the learner's main course dashboard. */}
+
       <Route path="/" element={<Navigate to="/my-courses" replace />} />
-      {/* My Courses is the dashboard page with the course grid and profile panel. */}
       <Route
         path="/my-courses"
         element={
@@ -56,22 +60,18 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-      {/* Main learner-facing course overview page. */}
       <Route
         path="/courses/:courseId"
         element={<CourseDetailPage theme={theme} toggleTheme={toggleTheme} />}
       />
-      {/* Separate reviews route planned as its own page. */}
       <Route
         path="/courses/:courseId/reviews"
         element={<CourseReviewsPage theme={theme} toggleTheme={toggleTheme} />}
       />
-      {/* Paid course CTA opens a dedicated payment placeholder route. */}
       <Route
         path="/courses/:courseId/payment"
         element={<PaymentFlowPage theme={theme} toggleTheme={toggleTheme} />}
       />
-      {/* Separate learn route states keep document, video, and quiz flows explicit. */}
       <Route
         path="/courses/:courseId/learn/:contentId/:mode"
         element={<LessonPlayerPage theme={theme} toggleTheme={toggleTheme} />}
@@ -83,6 +83,55 @@ export default function App() {
       <Route
         path="/courses/:courseId/learn/:contentId/quiz/reward"
         element={<LessonPlayerPage theme={theme} toggleTheme={toggleTheme} />}
+      />
+
+      <Route
+        path="/instructor"
+        element={
+          <ProtectedRoute>
+            <Navigate to="/instructor/courses" replace />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/instructor/courses"
+        element={
+          <ProtectedRoute>
+            <InstructorDashboard theme={theme} toggleTheme={toggleTheme} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/instructor/courses/:courseId/edit"
+        element={
+          <ProtectedRoute>
+            <CourseConfig theme={theme} toggleTheme={toggleTheme} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/instructor/reports"
+        element={
+          <ProtectedRoute>
+            <ReportingDashboardPage theme={theme} toggleTheme={toggleTheme} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/instructor/quizzes/:quizId/builder"
+        element={
+          <ProtectedRoute>
+            <QuizBuilderPage theme={theme} toggleTheme={toggleTheme} />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/instructor/content/:contentId/edit"
+        element={
+          <ProtectedRoute>
+            <LessonContentEditorPage theme={theme} toggleTheme={toggleTheme} />
+          </ProtectedRoute>
+        }
       />
     </Routes>
   );
