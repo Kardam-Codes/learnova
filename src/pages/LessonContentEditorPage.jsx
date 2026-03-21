@@ -12,97 +12,90 @@ import { getContentEditorMock } from "../data/instructorMock";
 const editorTabs = ["Content", "Description", "Additional attachment"];
 const categoryOptions = ["Video", "Document", "Image"];
 
-function ContentVariantFields({ content }) {
+function ContentCategorySelector({ selectedType }) {
   return (
-    <>
-      <div className="content-category-row">
-        <span>Content Category :</span>
-        {categoryOptions.map((option) => (
-          <label key={option} className="category-choice">
-            <input
-              type="radio"
-              name="contentType"
-              defaultChecked={content.type === option}
-            />
-            <span>{option}</span>
-          </label>
-        ))}
+    <div className="content-category-row">
+      <span>Content Category :</span>
+      {categoryOptions.map((option) => (
+        <label key={option} className="category-choice">
+          <input
+            type="radio"
+            name="contentType"
+            defaultChecked={selectedType === option}
+          />
+          <span>{option}</span>
+        </label>
+      ))}
+    </div>
+  );
+}
+
+function VideoContentFields({ content }) {
+  return (
+    <section className="content-variant-shell">
+      <ContentCategorySelector selectedType={content.type} />
+
+      <label className="editor-line-field editor-line-field-wide">
+        <span>Video Link:</span>
+        <input type="text" defaultValue={content.videoLink} />
+      </label>
+
+      <div className="content-variant-footer-grid">
+        <label className="editor-line-field">
+          <span>Responsible :</span>
+          <input type="text" defaultValue={content.responsible} />
+        </label>
+
+        <div className="duration-display-row">
+          <span>Duration :</span>
+          <strong>{content.duration}</strong>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FileBasedContentFields({ content, label }) {
+  return (
+    <section className="content-variant-shell">
+      <ContentCategorySelector selectedType={content.type} />
+
+      <div className="upload-row content-upload-row">
+        <label className="editor-line-field editor-line-field-upload">
+          <span>{label}</span>
+          <input type="text" defaultValue="" />
+        </label>
+
+        <button type="button" className="catalog-action-button instructor-cta-button content-upload-button">
+          {content.fileLabel}
+        </button>
       </div>
 
-      {content.type === "Video" ? (
-        <>
-          <label className="instructor-field">
-            <span>Video Link:</span>
-            <input type="text" defaultValue={content.videoLink} />
-          </label>
+      <div className="content-variant-footer-grid">
+        <label className="editor-line-field">
+          <span>Responsible :</span>
+          <input type="text" defaultValue={content.responsible} />
+        </label>
 
-          <label className="instructor-field instructor-field-short">
-            <span>Responsible :</span>
-            <input type="text" defaultValue={content.responsible} />
-          </label>
-
-          <label className="instructor-field instructor-field-short">
-            <span>Duration :</span>
-            <input type="text" defaultValue={content.duration} />
-          </label>
-        </>
-      ) : null}
-
-      {content.type === "Document" ? (
-        <>
-          <div className="upload-row">
-            <label className="instructor-field instructor-field-short">
-              <span>Document file:</span>
-              <input type="text" defaultValue="" />
-            </label>
-
-            <button type="button" className="catalog-action-button instructor-cta-button">
-              {content.fileLabel}
-            </button>
-          </div>
-
-          <div className="editor-inline-grid">
-            <label className="instructor-field instructor-field-short">
-              <span>Responsible :</span>
-              <input type="text" defaultValue={content.responsible} />
-            </label>
-
-            <label className="toggle-field">
-              <span>Allow Download :</span>
-              <input type="checkbox" defaultChecked={content.allowDownload} />
-            </label>
-          </div>
-        </>
-      ) : null}
-
-      {content.type === "Image" ? (
-        <>
-          <div className="upload-row">
-            <label className="instructor-field instructor-field-short">
-              <span>Image file :</span>
-              <input type="text" defaultValue="" />
-            </label>
-
-            <button type="button" className="catalog-action-button instructor-cta-button">
-              {content.fileLabel}
-            </button>
-          </div>
-
-          <div className="editor-inline-grid">
-            <label className="instructor-field instructor-field-short">
-              <span>Responsible :</span>
-              <input type="text" defaultValue={content.responsible} />
-            </label>
-
-            <label className="toggle-field">
-              <span>Allow Download :</span>
-              <input type="checkbox" defaultChecked={content.allowDownload} />
-            </label>
-          </div>
-        </>
-      ) : null}
-    </>
+        <label className="toggle-field content-download-toggle">
+          <span>Allow Download :</span>
+          <input type="checkbox" defaultChecked={content.allowDownload} />
+        </label>
+      </div>
+    </section>
   );
+}
+
+function ContentVariantFields({ content }) {
+  if (content.type === "Video") {
+    return <VideoContentFields content={content} />;
+  }
+
+  if (content.type === "Document") {
+    return <FileBasedContentFields content={content} label="Document file:" />;
+  }
+
+  return <FileBasedContentFields content={content} label="Image file :" />;
 }
 
 function DescriptionTab({ content }) {
