@@ -66,13 +66,11 @@ export default function Navbar({ brandName, learnerName, theme, toggleTheme }) {
           title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
         >
           <ThemeIcon theme={theme} />
-          <span>{theme === "light" ? "Light" : "Dark"}</span>
         </button>
 
         {isAuthenticated ? (
-          <div className="learner-badge" aria-label={`Signed in as ${resolvedLearnerName}`}>
-            <div className="learner-copy">
-              <span className="eyebrow">Logged in</span>
+          <>
+            <div className="learner-badge" aria-label={`Signed in as ${resolvedLearnerName}`}>
               <strong>{resolvedLearnerName}</strong>
             </div>
             <div className="profile-avatar" aria-hidden="true">
@@ -88,13 +86,10 @@ export default function Navbar({ brandName, learnerName, theme, toggleTheme }) {
             >
               Sign Out
             </button>
-          </div>
+          </>
         ) : (
-          <Link className="learner-badge navbar-signin-link" to="/auth/login">
-            <div className="learner-copy">
-              <span className="eyebrow">Access</span>
-              <strong>Sign In</strong>
-            </div>
+          <Link className="navbar-signin-link" to="/auth/login">
+            <strong>Sign In</strong>
             <div className="profile-avatar" aria-hidden="true">
               <svg viewBox="0 0 24 24" className="inline-icon">
                 <circle cx="12" cy="8" r="4" fill="currentColor" />

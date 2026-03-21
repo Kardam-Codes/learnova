@@ -5,7 +5,7 @@
  * What it is: A fullscreen learner player with a persistent sidebar, iframe viewers, quiz subflow, and reward state.
  */
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { getCourseDetailMock } from "../data/courseDetailMock";
 import { buildLearningRoute, buildQuizQuestionRoute, buildQuizRewardRoute } from "../utils/learningRoutes";
 import { LEARNING_CONTENT_MODE } from "../../shared/types/common_types";
@@ -53,54 +53,66 @@ function SidebarStatusIcon({ status }) {
   return <span className="learning-status is-pending" aria-hidden="true" />;
 }
 
-function LearningSidebar({ course, currentContentId }) {
+function LearningSidebar({ course, currentContentId, isOpen, onToggle }) {
   return (
-    <aside className="learning-sidebar">
+    <aside className={`learning-sidebar ${isOpen ? "" : "is-collapsed"}`}>
       <div className="learning-sidebar-top">
-        <Link className="learning-back-button" to={`/courses/${course.id}`}>
-          <BackArrowIcon />
-          <span>Back</span>
-        </Link>
-        <button type="button" className="learning-menu-button" aria-label="Learning menu">
+        {isOpen ? (
+          <Link className="learning-back-button" to={`/courses/${course.id}`}>
+            <BackArrowIcon />
+            <span>Back</span>
+          </Link>
+        ) : null}
+        <button
+          type="button"
+          className="learning-menu-button"
+          aria-label={isOpen ? "Collapse content sidebar" : "Expand content sidebar"}
+          aria-expanded={isOpen}
+          onClick={onToggle}
+        >
           <MenuIcon />
         </button>
       </div>
 
-      <div className="learning-course-card">
-        <h2>{course.title}</h2>
-        <div className="learning-progress-track">
-          <span
-            className="learning-progress-fill"
-            style={{ width: `${course.progress.completionPercentage}%` }}
-          />
-        </div>
-        <p>{course.progress.completionPercentage}% Completed</p>
-      </div>
-
-      <div className="learning-outline">
-        {course.contentItems.map((item) => (
-          <Link
-            key={item.id}
-            className={`learning-outline-item ${item.id === currentContentId ? "is-active" : ""}`}
-            to={buildLearningRoute(course.id, item)}
-          >
-            <div className="learning-outline-copy">
-              <span className="learning-outline-title">{item.title}</span>
-              {item.attachments?.length ? (
-                <div className="learning-attachments">
-                  {item.attachments.map((attachment) => (
-                    <span className="learning-attachment-label" key={attachment.id}>
-                      <AttachmentIcon />
-                      <span>{attachment.label}</span>
-                    </span>
-                  ))}
-                </div>
-              ) : null}
+      {isOpen ? (
+        <>
+          <div className="learning-course-card">
+            <h2>{course.title}</h2>
+            <div className="learning-progress-track">
+              <span
+                className="learning-progress-fill"
+                style={{ width: `${course.progress.completionPercentage}%` }}
+              />
             </div>
-            <SidebarStatusIcon status={item.status} />
-          </Link>
-        ))}
-      </div>
+            <p>{course.progress.completionPercentage}% Completed</p>
+          </div>
+
+          <div className="learning-outline">
+            {course.contentItems.map((item) => (
+              <Link
+                key={item.id}
+                className={`learning-outline-item ${item.id === currentContentId ? "is-active" : ""}`}
+                to={buildLearningRoute(course.id, item)}
+              >
+                <div className="learning-outline-copy">
+                  <span className="learning-outline-title">{item.title}</span>
+                  {item.attachments?.length ? (
+                    <div className="learning-attachments">
+                      {item.attachments.map((attachment) => (
+                        <span className="learning-attachment-label" key={attachment.id}>
+                          <AttachmentIcon />
+                          <span>{attachment.label}</span>
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+                <SidebarStatusIcon status={item.status} />
+              </Link>
+            ))}
+          </div>
+        </>
+      ) : null}
     </aside>
   );
 }
@@ -273,6 +285,7 @@ export default function LessonPlayerPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { courseId, contentId, mode, questionIndex } = useParams();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const course = getCourseDetailMock(courseId);
   const contentItem = course.contentItems.find((item) => item.id === contentId) ?? course.contentItems[0];
 
@@ -284,8 +297,13 @@ export default function LessonPlayerPage() {
 
   return (
     <main className="learning-page-shell">
-      <div className="learning-player-frame">
-        <LearningSidebar course={course} currentContentId={contentItem.id} />
+      <div className={`learning-player-frame ${isSidebarOpen ? "" : "is-sidebar-collapsed"}`}>
+        <LearningSidebar
+          course={course}
+          currentContentId={contentItem.id}
+          isOpen={isSidebarOpen}
+          onToggle={() => setIsSidebarOpen((current) => !current)}
+        />
         <section className="learning-main-panel">
           <LearningMainContent
             course={course}
