@@ -242,6 +242,21 @@ export default function CourseConfig() {
     }
   };
 
+  const handleContactAttendees = () => {
+    if (!attendees.length) {
+      setStatusMessage("No attendees are available to contact yet.");
+      return;
+    }
+
+    const mailtoList = attendees
+      .map((attendee) => attendee.email)
+      .filter(Boolean)
+      .join(",");
+
+    const subject = encodeURIComponent(`Learnova update: ${courseForm.title || "Course update"}`);
+    window.location.href = `mailto:${mailtoList}?subject=${subject}`;
+  };
+
   return (
     <main className="course-page-shell instructor-page-shell">
       <InstructorNavbar />
@@ -257,7 +272,11 @@ export default function CourseConfig() {
             </Link>
 
             <div className="inline-button-row">
-              <button type="button" className="catalog-action-button instructor-ghost-button">
+              <button
+                type="button"
+                className="catalog-action-button instructor-ghost-button"
+                onClick={handleContactAttendees}
+              >
                 Contact Attendees
               </button>
               <button

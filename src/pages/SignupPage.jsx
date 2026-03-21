@@ -86,7 +86,7 @@ export default function SignupPage() {
             label="Name"
             value={formValues.name}
             onChange={(value) => updateField("name", value)}
-            placeholder="Your full name"
+            placeholder="Enter full name"
           />
           <InputField
             id="signup-email"

@@ -90,6 +90,17 @@ export default function InstructorDashboard() {
     });
   }, [courses, normalizedQuery]);
 
+  const handleShareCourse = async (courseId) => {
+    const shareUrl = `${window.location.origin}/courses/${courseId}`;
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      window.alert("Course link copied to clipboard.");
+    } catch {
+      window.prompt("Copy this course link", shareUrl);
+    }
+  };
+
   return (
     <main className="course-page-shell instructor-page-shell">
       <InstructorNavbar />
@@ -166,7 +177,11 @@ export default function InstructorDashboard() {
                 </dl>
 
                 <div className="course-item-actions">
-                  <button type="button" className="catalog-action-button instructor-ghost-button">
+                  <button
+                    type="button"
+                    className="catalog-action-button instructor-ghost-button"
+                    onClick={() => handleShareCourse(course.id)}
+                  >
                     Share
                   </button>
                   <Link

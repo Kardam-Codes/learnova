@@ -127,8 +127,7 @@ export default function LoginPage() {
               placeholder="Enter your registered email"
             />
             <p>
-              This hackathon version keeps forgot-password as a modal flow. Backend
-              email reset wiring can be connected later.
+              Backend email reset wiring will be connected later.
             </p>
             <button type="button" className="auth-primary-button" onClick={() => navigate("/auth/login")}>
               Send Reset Link

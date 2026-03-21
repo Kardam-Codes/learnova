@@ -32,6 +32,7 @@ from backend.modules.admin.service import (
     get_admin_course,
     get_content_detail,
     get_quiz_detail,
+    get_reporting_course_progress,
     list_admin_courses,
     list_course_content,
     list_course_attendees,
@@ -48,6 +49,18 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 
 
 AdminOrInstructor = require_roles("admin", "instructor")
+
+
+@router.get("/reports/course-progress")
+def get_course_progress_report(
+    status: str | None = None,
+    _current_user: dict = Depends(AdminOrInstructor),
+):
+    """
+    This returns reporting summary cards and course-wise learner progress rows.
+    """
+
+    return get_reporting_course_progress(status)
 
 
 @router.get("/courses")

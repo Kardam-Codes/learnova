@@ -279,3 +279,12 @@ export async function deleteAdminQuizRequest(quizId, token) {
 
   return parseJsonResponse(response);
 }
+
+export async function fetchAdminCourseProgressReportRequest(token, status) {
+  const query = status ? `?status=${encodeURIComponent(status)}` : "";
+  const response = await fetch(`${API_BASE_URL}/admin/reports/course-progress${query}`, {
+    headers: buildHeaders(token),
+  });
+
+  return parseJsonResponse(response);
+}

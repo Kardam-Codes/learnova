@@ -630,6 +630,84 @@ def add_course_attendees(course_slug: str, attendees: list[dict[str, Any]]) -> d
     }
 
 
+def get_reporting_course_progress(status_filter: str | None = None) -> dict[str, Any]:
+    allowed_statuses = {"yet_to_start", "in_progress", "completed"}
+    normalized_filter = status_filter.lower() if status_filter else None
+    if normalized_filter and normalized_filter not in allowed_statuses:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid status filter.")
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            summary_row = _fetch_one(
+                cursor,
+                """
+                SELECT
+                  COUNT(*) AS total_participants,
+                  COUNT(*) FILTER (WHERE status = 'yet_to_start') AS yet_to_start,
+                  COUNT(*) FILTER (WHERE status = 'in_progress') AS in_progress,
+                  COUNT(*) FILTER (WHERE status = 'completed') AS completed
+                FROM reporting_course_progress;
+                """,
+            ) or {
+                "total_participants": 0,
+                "yet_to_start": 0,
+                "in_progress": 0,
+                "completed": 0,
+            }
+
+            if normalized_filter:
+                row_query = """
+                    SELECT *
+                    FROM reporting_course_progress
+                    WHERE status = %s
+                    ORDER BY course_name, participant_name;
+                """
+                row_params = (normalized_filter,)
+            else:
+                row_query = """
+                    SELECT *
+                    FROM reporting_course_progress
+                    ORDER BY course_name, participant_name;
+                """
+                row_params = ()
+
+            row_payload = _fetch_rows(cursor, row_query, row_params)
+
+    rows = []
+    for index, row in enumerate(row_payload, start=1):
+        time_spent_minutes = int(row["time_spent"] or 0)
+        hours = time_spent_minutes // 60
+        minutes = time_spent_minutes % 60
+        rows.append(
+            {
+                "id": index,
+                "courseId": str(row["course_id"]),
+                "courseName": row["course_name"],
+                "participantId": str(row["participant_id"]),
+                "participantName": row["participant_name"],
+                "enrolledDate": row["enrolled_date"].isoformat() if row["enrolled_date"] else None,
+                "startDate": row["start_date"].isoformat() if row["start_date"] else None,
+                "timeSpent": f"{hours}:{minutes:02d}",
+                "completionPercentage": f"{float(row['completion_percentage'] or 0):.0f}%",
+                "completedDate": row["completed_date"].isoformat() if row["completed_date"] else None,
+                "status": row["status"] or "yet_to_start",
+            }
+        )
+
+    summary = [
+        {"id": "participants", "label": "Total Participants", "value": int(summary_row["total_participants"] or 0)},
+        {"id": "yet-to-start", "label": "Yet to Start", "value": int(summary_row["yet_to_start"] or 0)},
+        {"id": "in-progress", "label": "In Progress", "value": int(summary_row["in_progress"] or 0)},
+        {"id": "completed", "label": "Completed", "value": int(summary_row["completed"] or 0)},
+    ]
+
+    return {
+        "summary": summary,
+        "rows": rows,
+        "activeFilter": normalized_filter,
+    }
+
+
 def list_course_content(course_slug: str) -> dict[str, Any]:
     with connect() as connection:
         with connection.cursor() as cursor:

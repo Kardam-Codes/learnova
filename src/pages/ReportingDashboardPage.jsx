@@ -2,10 +2,13 @@
  * File: ReportingDashboardPage.jsx
  * Owner: YUG
  * Purpose: Render the instructor reporting dashboard with summary cards and a learner progress table.
- * What it is: A route-level page for organiser analytics and participant progress review.
+ * What it is: A route-level page that uses the live reporting API for organiser analytics and participant progress review.
  */
+import { useEffect, useMemo, useState } from "react";
 import InstructorNavbar from "../components/InstructorNavbar";
 import { reportRows, reportSummary } from "../data/instructorMock";
+import { useAuth } from "../context/AuthContext";
+import { fetchAdminCourseProgressReportRequest } from "../utils/apiClient";
 
 function SummaryIcon({ kind }) {
   if (kind === "participants") {
@@ -48,7 +51,84 @@ function TableBadge({ label }) {
   return <span className="reporting-section-chip">{label}</span>;
 }
 
+function formatDisplayDate(dateValue) {
+  if (!dateValue) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+  }).format(new Date(dateValue));
+}
+
+function formatStatusLabel(status) {
+  if (status === "yet_to_start") {
+    return "Yet to Start";
+  }
+
+  if (status === "in_progress") {
+    return "In Progress";
+  }
+
+  if (status === "completed") {
+    return "Completed";
+  }
+
+  return status ?? "-";
+}
+
+const summaryToFilterMap = {
+  participants: "",
+  "yet-to-start": "yet_to_start",
+  "in-progress": "in_progress",
+  completed: "completed",
+};
+
 export default function ReportingDashboardPage() {
+  const { token } = useAuth();
+  const [summary, setSummary] = useState(reportSummary);
+  const [rows, setRows] = useState(reportRows);
+  const [activeFilter, setActiveFilter] = useState("");
+  const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadReport = async () => {
+      try {
+        const response = await fetchAdminCourseProgressReportRequest(token, activeFilter || undefined);
+        if (!isMounted) {
+          return;
+        }
+
+        setSummary(response.summary);
+        setRows(response.rows);
+        setLoadError("");
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setSummary(reportSummary);
+        setRows(reportRows);
+        setLoadError(error.message);
+      }
+    };
+
+    if (token) {
+      loadReport();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeFilter, token]);
+
+  const totalRowsLabel = useMemo(() => {
+    return rows.length === 1 ? "1 row" : `${rows.length} rows`;
+  }, [rows]);
+
   return (
     <main className="course-page-shell instructor-page-shell">
       <InstructorNavbar />
@@ -59,28 +139,40 @@ export default function ReportingDashboardPage() {
             <TableBadge label="Overview" />
           </div>
 
+          {loadError ? (
+            <p className="content-empty">
+              Live report data could not be loaded. Showing fallback report data.
+            </p>
+          ) : null}
+
           <div className="report-summary-grid report-summary-grid-annotated">
-            {reportSummary.map((item) => (
-              <article key={item.id} className="report-summary-card report-summary-card-annotated">
-                <div className="report-summary-icon-wrap">
-                  <SummaryIcon kind={item.id} />
-                </div>
-                <strong>{item.value}</strong>
-                <span>{item.label}</span>
-              </article>
-            ))}
+            {summary.map((item) => {
+              const filterValue = summaryToFilterMap[item.id] ?? "";
+              const isActive = activeFilter === filterValue;
+
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`report-summary-card report-summary-card-annotated${
+                    isActive ? " is-active" : ""
+                  }`}
+                  onClick={() => setActiveFilter((current) => (current === filterValue ? "" : filterValue))}
+                >
+                  <div className="report-summary-icon-wrap">
+                    <SummaryIcon kind={item.id} />
+                  </div>
+                  <strong>{item.value}</strong>
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
           </div>
 
           <div className="reporting-table-shell reporting-table-shell-annotated">
             <div className="reporting-section-row reporting-section-row-between">
               <TableBadge label="Users" />
-              <span className="reporting-grid-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24">
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <line x1="3" y1="9" x2="21" y2="9" />
-                  <line x1="9" y1="3" x2="9" y2="21" />
-                </svg>
-              </span>
+              <span className="content-empty">{totalRowsLabel}</span>
             </div>
 
             <div className="reporting-table">
@@ -96,17 +188,17 @@ export default function ReportingDashboardPage() {
                 <span>Status</span>
               </div>
 
-              {reportRows.map((row) => (
-                <div key={row.id} className="reporting-table-row reporting-table-row-annotated">
+              {rows.map((row) => (
+                <div key={`${row.courseName}-${row.participantName}-${row.id}`} className="reporting-table-row reporting-table-row-annotated">
                   <span>{row.id}</span>
                   <span>{row.courseName}</span>
                   <span>{row.participantName}</span>
-                  <span>{row.enrolledDate}</span>
-                  <span>{row.startDate}</span>
+                  <span>{formatDisplayDate(row.enrolledDate)}</span>
+                  <span>{formatDisplayDate(row.startDate)}</span>
                   <span>{row.timeSpent}</span>
                   <span>{row.completionPercentage}</span>
-                  <span>{row.completedDate}</span>
-                  <span>{row.status}</span>
+                  <span>{formatDisplayDate(row.completedDate)}</span>
+                  <span>{formatStatusLabel(row.status)}</span>
                 </div>
               ))}
             </div>
