@@ -995,6 +995,120 @@ img {
   background: #000;
 }
 
+.pdf-viewer-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 440px;
+  background: #161a1d;
+}
+
+.pdf-viewer-shell:focus-visible {
+  outline: 4px solid var(--teal);
+  outline-offset: -4px;
+}
+
+.pdf-viewer-shell.is-fullscreen {
+  min-height: 100vh;
+}
+
+.pdf-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-top: 4px solid var(--line);
+  border-bottom: 4px solid var(--line);
+  background: var(--panel-alt);
+  flex-wrap: wrap;
+}
+
+.pdf-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pdf-toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 4px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: var(--hard-shadow);
+  cursor: pointer;
+}
+
+.pdf-toolbar-reset {
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.pdf-toolbar-button.is-link {
+  text-decoration: none;
+}
+
+.pdf-toolbar-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pdf-toolbar-label {
+  min-width: 88px;
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.pdf-canvas-shell {
+  position: relative;
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 20px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px) 0 0 / 20px 20px,
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px) 0 0 / 20px 20px,
+    #0d1012;
+}
+
+.pdf-viewer-shell.is-fullscreen .pdf-canvas-shell {
+  padding: 28px;
+}
+
+.pdf-viewer-state {
+  position: absolute;
+  inset: 20px;
+  display: grid;
+  place-items: center;
+  border: 4px dashed var(--line);
+  background: rgba(9, 9, 9, 0.75);
+  color: var(--paper);
+  font-weight: 800;
+}
+
+.pdf-viewer-state.is-error {
+  color: #ffb3b3;
+}
+
+.pdf-canvas {
+  max-width: 100%;
+  height: auto;
+  box-shadow: 0 20px 36px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.pdf-canvas.is-visible {
+  opacity: 1;
+}
+
 .quiz-intro-card,
 .quiz-question-card {
   display: flex;

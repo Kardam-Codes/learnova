@@ -15,6 +15,8 @@ const sharedProvider = {
   learnerName: "Kardam",
 };
 
+const LOCAL_SAMPLE_PDF = "/docs/dummy.pdf";
+
 function createReviewSummary(averageRating, items, learnerDraft) {
   return {
     averageRating,
@@ -124,8 +126,7 @@ function createDocumentContent() {
     duration: "11 min",
     description:
       "Read the best-practice checklist covering segmentation, tags, saved filters, and weekly pipeline hygiene.",
-    contentUrl:
-      "https://docs.google.com/gview?embedded=1&url=https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+    contentUrl: LOCAL_SAMPLE_PDF,
     attachments: [
       createAttachment(
         "best-practice-sheet",
@@ -197,8 +198,7 @@ function createWrapUpContent() {
     duration: "9 min",
     description:
       "Use repeatable lead templates and handoff notes to make the final stretch of your CRM workflow easier to execute.",
-    contentUrl:
-      "https://docs.google.com/gview?embedded=1&url=https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+    contentUrl: LOCAL_SAMPLE_PDF,
     attachments: [
       createAttachment(
         "lead-template-pack",
@@ -313,8 +313,7 @@ export const courseDetailMockById = {
         order: 2,
         duration: "10 min",
         description: "Set up a lightweight lead scoring model for better handoff decisions.",
-        contentUrl:
-          "https://docs.google.com/gview?embedded=1&url=https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+        contentUrl: LOCAL_SAMPLE_PDF,
         attachments: [
           createAttachment("lead-score-sheet", "Lead scoring sheet", "https://example.com/scoring.pdf"),
         ],
@@ -362,8 +361,7 @@ export const courseDetailMockById = {
         order: 4,
         duration: "8 min",
         description: "Finalize a clean transition from marketing to sales.",
-        contentUrl:
-          "https://docs.google.com/gview?embedded=1&url=https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+        contentUrl: LOCAL_SAMPLE_PDF,
         attachments: [],
         nextContentId: null,
       }),
@@ -417,8 +415,7 @@ export const courseDetailMockById = {
         order: 2,
         duration: "13 min",
         description: "Choose the right event model for workflows that scale.",
-        contentUrl:
-          "https://docs.google.com/gview?embedded=1&url=https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+        contentUrl: LOCAL_SAMPLE_PDF,
         attachments: [],
         nextContentId: "automation-quiz",
       }),
@@ -518,8 +515,7 @@ export const courseDetailMockById = {
         order: 2,
         duration: "12 min",
         description: "Build a weekly reporting rhythm around lead and deal health.",
-        contentUrl:
-          "https://docs.google.com/gview?embedded=1&url=https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+        contentUrl: LOCAL_SAMPLE_PDF,
         attachments: [],
         nextContentId: "analytics-quiz",
       }),
@@ -565,8 +561,7 @@ export const courseDetailMockById = {
         order: 4,
         duration: "10 min",
         description: "Build a retention view that keeps churn risk visible.",
-        contentUrl:
-          "https://docs.google.com/gview?embedded=1&url=https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf",
+        contentUrl: LOCAL_SAMPLE_PDF,
         attachments: [
           createAttachment(
             "retention-template",

@@ -5,10 +5,12 @@
  * What it is: A fullscreen learner player with a persistent sidebar, iframe viewers, quiz subflow, and reward state.
  */
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { getCourseDetailMock } from "../data/courseDetailMock";
 import { buildLearningRoute, buildQuizQuestionRoute, buildQuizRewardRoute } from "../utils/learningRoutes";
 import { LEARNING_CONTENT_MODE } from "../../shared/types/common_types";
+
+const PDFViewer = lazy(() => import("../components/PDFViewer"));
 
 function BackArrowIcon() {
   return (
@@ -139,6 +141,21 @@ function QuizChoices({ question, selectedIndex }) {
   );
 }
 
+function PDFViewerFallback() {
+  return (
+    <div className="pdf-viewer-shell">
+      <div className="pdf-toolbar">
+        <div className="pdf-toolbar-group">
+          <span className="pdf-toolbar-label">Preparing PDF...</span>
+        </div>
+      </div>
+      <div className="pdf-canvas-shell">
+        <div className="pdf-viewer-state">Loading PDF viewer...</div>
+      </div>
+    </div>
+  );
+}
+
 function LearningMainContent({ course, contentItem, questionIndex, pathname }) {
   const questionNumber = questionIndex === null ? null : Number(questionIndex);
   const questions = contentItem.quizQuestions ?? [];
@@ -154,8 +171,10 @@ function LearningMainContent({ course, contentItem, questionIndex, pathname }) {
       <>
         <div className="learning-description-strip">{contentItem.description}</div>
         <section className="learning-viewer-card">
-          <h1>Document</h1>
-          <iframe src={contentItem.contentUrl} title={contentItem.title} className="learning-iframe" />
+          <h1>{contentItem.title}</h1>
+          <Suspense fallback={<PDFViewerFallback />}>
+            <PDFViewer fileUrl={contentItem.contentUrl} title={contentItem.title} />
+          </Suspense>
         </section>
         <div className="learning-footer-actions">
           <LearningFooterAction
