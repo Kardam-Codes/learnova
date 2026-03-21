@@ -85,6 +85,7 @@ export default function App() {
         element={<LessonPlayerPage theme={theme} toggleTheme={toggleTheme} />}
       />
 
+      {/* Instructor and organiser pages are grouped under a dedicated route prefix. */}
       <Route
         path="/instructor"
         element={
