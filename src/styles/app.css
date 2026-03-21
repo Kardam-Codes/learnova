@@ -3407,3 +3407,109 @@ img {
 .attachment-upload-button {
   min-width: 180px;
 }
+
+/* Lesson editor refinements for content tab variants */
+.content-variant-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  padding-top: 6px;
+}
+
+.editor-line-field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 520px;
+}
+
+.editor-line-field span,
+.duration-display-row span {
+  min-width: 128px;
+  color: var(--ink);
+  font-family: Manrope, "Segoe UI", sans-serif;
+  font-weight: 800;
+}
+
+.editor-line-field input {
+  flex: 1;
+  border-width: 0 0 4px;
+  background: transparent;
+  color: var(--cyan);
+  padding: 8px 0;
+  box-shadow: none;
+}
+
+.editor-line-field input:focus {
+  background: transparent;
+  color: var(--cyan);
+  box-shadow: none;
+}
+
+.editor-line-field-wide {
+  max-width: 760px;
+}
+
+.content-variant-footer-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 360px) auto;
+  gap: 26px;
+  align-items: center;
+}
+
+.duration-display-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--ink);
+}
+
+.duration-display-row strong {
+  color: var(--ink);
+  font-family: Manrope, "Segoe UI", sans-serif;
+  font-size: 1.05rem;
+}
+
+.content-upload-row {
+  align-items: center;
+  gap: 26px;
+}
+
+.editor-line-field-upload {
+  max-width: 520px;
+}
+
+.content-upload-button {
+  min-width: 146px;
+}
+
+.content-download-toggle {
+  justify-self: start;
+}
+
+.content-download-toggle input {
+  width: 24px;
+  height: 24px;
+  accent-color: #8b6fe9;
+}
+
+.category-choice input {
+  accent-color: #8b6fe9;
+}
+
+@media (max-width: 820px) {
+  .content-variant-footer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-line-field,
+  .content-upload-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .editor-line-field span,
+  .duration-display-row span {
+    min-width: 0;
+  }
+}
