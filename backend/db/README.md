@@ -70,3 +70,4 @@ psql -U postgres -d learnova -f backend/db/seed.sql
 - `migrations/` is the preferred incremental setup path
 - `seed.sql` is demo-friendly and idempotent enough for repeated local setup
 - the schema includes slug support so DB records map cleanly to frontend routes
+- the current local app DB is configured as `learnova`, not `fleetflow`
