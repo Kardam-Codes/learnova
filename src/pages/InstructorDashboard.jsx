@@ -2,12 +2,14 @@
  * File: InstructorDashboard.jsx
  * Owner: YUG
  * Purpose: Render the instructor course management dashboard in both list and kanban views.
- * What it is: A route-level page that shows searchable course records with actions for edit, share, and creation.
+ * What it is: A route-level page that shows searchable live course records with actions for edit, share, and creation.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import InstructorNavbar from "../components/InstructorNavbar";
 import { instructorCourses } from "../data/instructorMock";
+import { useAuth } from "../context/AuthContext";
+import { fetchAdminCoursesRequest } from "../utils/apiClient";
 
 function ViewToggleIcon({ active, mode }) {
   return (
@@ -29,18 +31,64 @@ function ViewToggleIcon({ active, mode }) {
   );
 }
 
+function mapApiCourseToDashboardCourse(course) {
+  return {
+    id: course.slug,
+    title: course.title,
+    tags: course.tags ?? [],
+    views: 0,
+    contents: course.contentCount ?? 0,
+    duration: "-",
+    isPublished: Boolean(course.isPublished),
+  };
+}
+
 export default function InstructorDashboard() {
+  const { token } = useAuth();
   const [query, setQuery] = useState("");
   const [viewMode, setViewMode] = useState("list");
+  const [courses, setCourses] = useState(instructorCourses);
+  const [loadError, setLoadError] = useState("");
   const normalizedQuery = query.trim().toLowerCase();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCourses = async () => {
+      try {
+        const response = await fetchAdminCoursesRequest(token);
+        if (!isMounted) {
+          return;
+        }
+
+        setCourses(response.courses.map(mapApiCourseToDashboardCourse));
+        setLoadError("");
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        setCourses(instructorCourses);
+        setLoadError(error.message);
+      }
+    };
+
+    if (token) {
+      loadCourses();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [token]);
 
   // Search checks both course titles and tags so instructors can quickly locate a record.
   const filteredCourses = useMemo(() => {
-    return instructorCourses.filter((course) => {
+    return courses.filter((course) => {
       const searchTarget = [course.title, ...course.tags].join(" ").toLowerCase();
       return normalizedQuery ? searchTarget.includes(normalizedQuery) : true;
     });
-  }, [normalizedQuery]);
+  }, [courses, normalizedQuery]);
 
   return (
     <main className="course-page-shell instructor-page-shell">
@@ -72,6 +120,12 @@ export default function InstructorDashboard() {
             </div>
           </div>
 
+          {loadError ? (
+            <p className="content-empty">
+              Live course data could not be loaded. Showing fallback records.
+            </p>
+          ) : null}
+
           <div
             className={`instructor-course-collection${
               viewMode === "kanban" ? " is-kanban" : ""
@@ -89,10 +143,9 @@ export default function InstructorDashboard() {
 
                   <div className="course-item-tags" aria-label="Course tags">
                     {course.tags.map((tag) => (
-                      <button key={tag} type="button" className="course-item-tag">
+                      <span key={tag} className="course-item-tag">
                         {tag}
-                        <span aria-hidden="true">×</span>
-                      </button>
+                      </span>
                     ))}
                   </div>
                 </div>

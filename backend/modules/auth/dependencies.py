@@ -58,3 +58,29 @@ def get_current_user(token_payload: TokenPayload = Depends(get_current_token_pay
     """
 
     return get_user_by_id(token_payload.sub)
+
+
+def normalize_user_role(role: str) -> str:
+    """
+    The super admin should be allowed through admin-level route checks.
+    """
+
+    return "admin" if role == "super_admin" else role
+
+
+def require_roles(*allowed_roles: str):
+    """
+    This creates a dependency that rejects users whose role is outside the allowed list.
+    """
+
+    def _dependency(current_user: dict = Depends(get_current_user)) -> dict:
+        normalized_role = normalize_user_role(current_user["role"])
+        if normalized_role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to access this resource.",
+            )
+
+        return current_user
+
+    return _dependency

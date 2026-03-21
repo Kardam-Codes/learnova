@@ -24,3 +24,8 @@ class QuizAnswerRequest(BaseModel):
 
 class QuizAttemptRequest(BaseModel):
     answers: list[QuizAnswerRequest]
+
+
+class ContentProgressUpdateRequest(BaseModel):
+    status: str = Field(pattern="^(not_started|in_progress|completed)$")
+    lastPosition: int = Field(ge=0, default=0)

@@ -10,6 +10,7 @@ What it is: A FastAPI entrypoint with health checks and the initial auth routes.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.modules.admin.router import router as admin_router
 from backend.modules.auth.router import router as auth_router
 from backend.modules.courses.router import router as course_router
 
@@ -61,3 +62,4 @@ def health():
 # The auth router also exposes /auth and /db/health endpoints.
 app.include_router(auth_router)
 app.include_router(course_router)
+app.include_router(admin_router)

@@ -308,6 +308,70 @@ def _serialize_single_content_item(cursor, course_slug: str, content_slug: str, 
     return payload
 
 
+def _recalculate_course_progress(cursor, course_id: str, user_id: str, current_content_db_id: str | None = None) -> dict[str, Any]:
+    """
+    This keeps the aggregate course progress in sync after a content or quiz update.
+    """
+
+    progress_rows = _fetch_rows(
+        cursor,
+        """
+        SELECT status
+        FROM content_progress
+        WHERE course_id = %s AND user_id = %s::uuid;
+        """,
+        (course_id, user_id),
+    )
+    total_content_row = _fetch_one(
+        cursor,
+        "SELECT COUNT(*) AS total_count FROM course_content WHERE course_id = %s;",
+        (course_id,),
+    )
+    total_count = int(total_content_row["total_count"])
+    completed_count = sum(1 for row in progress_rows if row["status"] == "completed")
+    in_progress_count = sum(1 for row in progress_rows if row["status"] == "in_progress")
+    incomplete_count = max(total_count - completed_count, 0)
+    completion_percentage = round((completed_count / max(total_count, 1)) * 100, 2)
+    overall_status = "completed" if completed_count == total_count else ("in_progress" if completed_count or in_progress_count else "yet_to_start")
+    completed_at = datetime.now(timezone.utc) if overall_status == "completed" else None
+
+    cursor.execute(
+        """
+        INSERT INTO course_progress (
+          course_id, user_id, completion_percentage, completed_count, incomplete_count, current_content_id, status, started_at, completed_at
+        )
+        VALUES (%s, %s::uuid, %s, %s, %s, %s, %s, NOW(), %s)
+        ON CONFLICT (course_id, user_id)
+        DO UPDATE SET
+          completion_percentage = EXCLUDED.completion_percentage,
+          completed_count = EXCLUDED.completed_count,
+          incomplete_count = EXCLUDED.incomplete_count,
+          current_content_id = EXCLUDED.current_content_id,
+          status = EXCLUDED.status,
+          completed_at = EXCLUDED.completed_at,
+          updated_at = NOW();
+        """,
+        (
+            course_id,
+            user_id,
+            completion_percentage,
+            completed_count,
+            incomplete_count,
+            current_content_db_id,
+            overall_status,
+            completed_at,
+        ),
+    )
+
+    return {
+        "completionPercentage": completion_percentage,
+        "completedCount": completed_count,
+        "incompleteCount": incomplete_count,
+        "totalCount": total_count,
+        "status": overall_status,
+    }
+
+
 def list_courses_for_user(user: dict[str, Any]) -> dict[str, Any]:
     """
     This returns the learner dashboard payload with course-card data and profile data.
@@ -554,6 +618,65 @@ def get_course_content_for_user(course_slug: str, content_slug: str, user: dict[
     }
 
 
+def update_content_progress_for_user(
+    course_slug: str,
+    content_slug: str,
+    user: dict[str, Any],
+    *,
+    status_value: str,
+    last_position: int,
+) -> dict[str, Any]:
+    """
+    This updates a learner's progress for a lesson/document/video item and refreshes course progress.
+    """
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            content_row = _load_content_row_by_slug(cursor, course_slug, content_slug, user["id"])
+            if not content_row:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Content not found.",
+                )
+
+            completed_at = datetime.now(timezone.utc) if status_value == "completed" else None
+            cursor.execute(
+                """
+                INSERT INTO content_progress (content_id, course_id, user_id, status, last_position, completed_at)
+                VALUES (%s, %s, %s::uuid, %s, %s, %s)
+                ON CONFLICT (content_id, user_id)
+                DO UPDATE SET
+                  status = EXCLUDED.status,
+                  last_position = EXCLUDED.last_position,
+                  completed_at = EXCLUDED.completed_at,
+                  updated_at = NOW();
+                """,
+                (
+                    content_row["id"],
+                    content_row["course_id"],
+                    user["id"],
+                    status_value,
+                    last_position,
+                    completed_at,
+                ),
+            )
+
+            course_progress = _recalculate_course_progress(
+                cursor,
+                str(content_row["course_id"]),
+                user["id"],
+                str(content_row["id"]),
+            )
+            updated_content = _serialize_single_content_item(cursor, course_slug, content_slug, user["id"])
+            connection.commit()
+
+    return {
+        "courseId": course_slug,
+        "contentItem": updated_content,
+        "progress": course_progress,
+    }
+
+
 def submit_course_review(course_slug: str, user: dict[str, Any], rating: int, comment: str) -> dict[str, Any]:
     """
     This upserts the learner review and returns the refreshed review summary.
@@ -763,53 +886,11 @@ def submit_quiz_attempt(course_slug: str, content_slug: str, user: dict[str, Any
                 (quiz_row["content_id"], quiz_row["course_id"], user["id"]),
             )
 
-            progress_rows = _fetch_rows(
+            _recalculate_course_progress(
                 cursor,
-                """
-                SELECT status
-                FROM content_progress
-                WHERE course_id = %s AND user_id = %s::uuid;
-                """,
-                (quiz_row["course_id"], user["id"]),
-            )
-            total_content_row = _fetch_one(
-                cursor,
-                "SELECT COUNT(*) AS total_count FROM course_content WHERE course_id = %s;",
-                (quiz_row["course_id"],),
-            )
-            total_count = int(total_content_row["total_count"])
-            completed_count = sum(1 for row in progress_rows if row["status"] == "completed")
-            in_progress_count = sum(1 for row in progress_rows if row["status"] == "in_progress")
-            completion_percentage = round((completed_count / max(total_count, 1)) * 100, 2)
-            overall_status = "completed" if completed_count == total_count else ("in_progress" if completed_count or in_progress_count else "yet_to_start")
-            completed_at = datetime.now(timezone.utc) if overall_status == "completed" else None
-
-            cursor.execute(
-                """
-                INSERT INTO course_progress (
-                  course_id, user_id, completion_percentage, completed_count, incomplete_count, current_content_id, status, started_at, completed_at
-                )
-                VALUES (%s, %s::uuid, %s, %s, %s, %s, %s, NOW(), %s)
-                ON CONFLICT (course_id, user_id)
-                DO UPDATE SET
-                  completion_percentage = EXCLUDED.completion_percentage,
-                  completed_count = EXCLUDED.completed_count,
-                  incomplete_count = EXCLUDED.incomplete_count,
-                  current_content_id = EXCLUDED.current_content_id,
-                  status = EXCLUDED.status,
-                  completed_at = EXCLUDED.completed_at,
-                  updated_at = NOW();
-                """,
-                (
-                    quiz_row["course_id"],
-                    user["id"],
-                    completion_percentage,
-                    completed_count,
-                    max(total_count - completed_count, 0),
-                    quiz_row["content_id"],
-                    overall_status,
-                    completed_at,
-                ),
+                str(quiz_row["course_id"]),
+                user["id"],
+                str(quiz_row["content_id"]),
             )
 
             cursor.execute(

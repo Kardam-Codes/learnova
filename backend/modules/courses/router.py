@@ -20,8 +20,13 @@ from backend.modules.courses.service import (
     list_courses_for_user,
     submit_course_review,
     submit_quiz_attempt,
+    update_content_progress_for_user,
 )
-from backend.modules.courses.schemas import QuizAttemptRequest, ReviewSubmissionRequest
+from backend.modules.courses.schemas import (
+    ContentProgressUpdateRequest,
+    QuizAttemptRequest,
+    ReviewSubmissionRequest,
+)
 
 
 router = APIRouter(prefix="/courses", tags=["courses"])
@@ -74,6 +79,26 @@ def get_course_content(course_slug: str, content_slug: str, current_user: dict =
     """
 
     return get_course_content_for_user(course_slug, content_slug, current_user)
+
+
+@router.post("/{course_slug}/content/{content_slug}/progress")
+def post_course_content_progress(
+    course_slug: str,
+    content_slug: str,
+    payload: ContentProgressUpdateRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    This updates lesson/document/video progress for the current learner.
+    """
+
+    return update_content_progress_for_user(
+        course_slug,
+        content_slug,
+        current_user,
+        status_value=payload.status,
+        last_position=payload.lastPosition,
+    )
 
 
 @router.get("/{course_slug}/quizzes/{content_slug}")
