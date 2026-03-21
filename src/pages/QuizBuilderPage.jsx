@@ -90,24 +90,24 @@ export default function QuizBuilderPage() {
                 </button>
               </>
             ) : (
-              <div className="quiz-rewards-panel">
+              <div className="quiz-rewards-panel quiz-rewards-panel-annotated">
                 <h2>Rewards</h2>
-                <div className="reward-line">
+                <div className="reward-line reward-line-annotated">
                   <span>First try :</span>
                   <input type="text" defaultValue={quiz.rewards.first} />
                   <span>points</span>
                 </div>
-                <div className="reward-line">
+                <div className="reward-line reward-line-annotated">
                   <span>Second try :</span>
                   <input type="text" defaultValue={quiz.rewards.second} />
                   <span>points</span>
                 </div>
-                <div className="reward-line">
+                <div className="reward-line reward-line-annotated">
                   <span>Third try :</span>
                   <input type="text" defaultValue={quiz.rewards.third} />
                   <span>points</span>
                 </div>
-                <div className="reward-line">
+                <div className="reward-line reward-line-annotated reward-line-long-label">
                   <span>Fourth Try and more :</span>
                   <input type="text" defaultValue={quiz.rewards.fourthPlus} />
                   <span>points</span>

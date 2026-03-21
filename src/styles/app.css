@@ -3513,3 +3513,159 @@ img {
     min-width: 0;
   }
 }
+
+/* Reporting, rewards, and course config refinements */
+.reporting-shell-annotated {
+  gap: 22px;
+}
+
+.reporting-section-row {
+  display: flex;
+  align-items: center;
+}
+
+.reporting-section-row-between {
+  justify-content: space-between;
+}
+
+.reporting-section-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 84px;
+  padding: 8px 14px;
+  border: 3px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--yellow) 38%, transparent);
+  color: #ff8ca1;
+  font-family: Manrope, "Segoe UI", sans-serif;
+  font-weight: 800;
+}
+
+.report-summary-grid-annotated {
+  margin-top: 6px;
+}
+
+.report-summary-card-annotated {
+  border-radius: 18px;
+}
+
+.report-summary-icon-wrap {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  border: 3px solid #ff8ca1;
+  border-radius: 18px;
+}
+
+.reporting-grid-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+}
+
+.reporting-grid-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2;
+}
+
+.reporting-table-shell-annotated {
+  gap: 18px;
+}
+
+.reporting-table-head-annotated,
+.reporting-table-row-annotated {
+  min-height: 56px;
+}
+
+.reporting-table-row-annotated span:last-child {
+  color: #d68516;
+}
+
+.quiz-rewards-panel-annotated {
+  max-width: 520px;
+}
+
+.reward-line-annotated {
+  grid-template-columns: 160px 90px auto;
+  align-items: end;
+  color: #d68516;
+}
+
+.reward-line-annotated input {
+  border-width: 0 0 3px;
+  background: transparent;
+  color: var(--yellow);
+  padding: 4px 0;
+  text-align: center;
+  box-shadow: none;
+}
+
+.reward-line-annotated input:focus {
+  background: transparent;
+  color: var(--yellow);
+  box-shadow: none;
+}
+
+.reward-line-long-label {
+  grid-template-columns: 220px 90px auto;
+}
+
+.course-description-panel {
+  min-height: 260px;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.course-description-panel p {
+  color: #67d775;
+}
+
+.options-panel-grid-annotated {
+  gap: 28px;
+}
+
+.option-box-annotated {
+  min-height: 250px;
+}
+
+.options-select-field select,
+.option-price-field input {
+  max-width: 320px;
+  border-width: 0 0 4px;
+  background: transparent;
+  box-shadow: none;
+  padding: 8px 0;
+}
+
+.options-select-field select:focus,
+.option-price-field input:focus {
+  background: transparent;
+  color: var(--cyan);
+  box-shadow: none;
+}
+
+.option-price-field input {
+  color: var(--cyan);
+  font-weight: 800;
+}
+
+.options-checkbox-row-annotated {
+  align-items: center;
+}
+
+.options-checkbox-row-annotated input {
+  accent-color: #8b6fe9;
+}
+
+.options-admin-field {
+  margin-top: auto;
+}
