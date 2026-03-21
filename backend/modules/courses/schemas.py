@@ -29,3 +29,9 @@ class QuizAttemptRequest(BaseModel):
 class ContentProgressUpdateRequest(BaseModel):
     status: str = Field(pattern="^(not_started|in_progress|completed)$")
     lastPosition: int = Field(ge=0, default=0)
+
+
+class PaymentVerificationRequest(BaseModel):
+    razorpayOrderId: str = Field(min_length=3, max_length=255)
+    razorpayPaymentId: str = Field(min_length=3, max_length=255)
+    razorpaySignature: str = Field(min_length=3, max_length=255)

@@ -17,6 +17,7 @@ export const COURSE_CONTENT_TYPE = {
 
 export const COURSE_ACCESS_STATE = {
   JOIN: "join",
+  ENROLL: "enroll",
   START: "start",
   CONTINUE: "continue",
   BUY: "buy",
@@ -40,7 +41,7 @@ export const LEARNING_CONTENT_MODE = {
 /**
  * @typedef {"not_started" | "in_progress" | "completed"} CourseContentStatus
  * @typedef {"lesson" | "quiz"} CourseContentType
- * @typedef {"join" | "start" | "continue" | "buy"} CourseAccessState
+ * @typedef {"join" | "enroll" | "start" | "continue" | "buy"} CourseAccessState
  * @typedef {"document" | "video" | "quiz"} LearningContentMode
  *
  * @typedef {Object} CourseProgressSummary
@@ -93,6 +94,8 @@ export const LEARNING_CONTENT_MODE = {
  * @property {string} [contentUrl]
  * @property {CourseAttachment[]} [attachments]
  * @property {string | null} [nextContentId]
+ * @property {boolean} [isLocked]
+ * @property {string | null} [lockReason]
  * @property {QuizAttemptRules} [quizRules]
  * @property {QuizQuestion[]} [quizQuestions]
  * @property {RewardSummary} [reward]
@@ -118,6 +121,7 @@ export const LEARNING_CONTENT_MODE = {
  * @property {boolean} isPaid
  * @property {number | null} price
  * @property {boolean} isPurchased
+ * @property {boolean} isEnrolled
  * @property {boolean} isLoggedIn
  * @property {boolean} hasStarted
  * @property {boolean} isInProgress

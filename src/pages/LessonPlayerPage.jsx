@@ -6,7 +6,6 @@
  */
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Suspense, lazy, useEffect, useState } from "react";
-import { getCourseDetailMock } from "../data/courseDetailMock";
 import { buildLearningRoute, buildQuizQuestionRoute, buildQuizRewardRoute } from "../utils/learningRoutes";
 import { LEARNING_CONTENT_MODE } from "../../shared/types/common_types";
 import EmptyState from "../components/EmptyState";
@@ -101,26 +100,50 @@ function LearningSidebar({ course, currentContentId, isOpen, onToggle }) {
 
           <div className="learning-outline">
             {course.contentItems.map((item) => (
-              <Link
-                key={item.id}
-                className={`learning-outline-item ${item.id === currentContentId ? "is-active" : ""}`}
-                to={buildLearningRoute(course.id, item)}
-              >
-                <div className="learning-outline-copy">
-                  <span className="learning-outline-title">{item.title}</span>
-                  {item.attachments?.length ? (
-                    <div className="learning-attachments">
-                      {item.attachments.map((attachment) => (
-                        <span className="learning-attachment-label" key={attachment.id}>
-                          <AttachmentIcon />
-                          <span>{attachment.label}</span>
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
+              item.isLocked ? (
+                <div
+                  key={item.id}
+                  className={`learning-outline-item is-locked ${item.id === currentContentId ? "is-active" : ""}`}
+                  aria-label={`${item.title} is locked`}
+                >
+                  <div className="learning-outline-copy">
+                    <span className="learning-outline-title">{item.title}</span>
+                    {item.attachments?.length ? (
+                      <div className="learning-attachments">
+                        {item.attachments.map((attachment) => (
+                          <span className="learning-attachment-label" key={attachment.id}>
+                            <AttachmentIcon />
+                            <span>{attachment.label}</span>
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                    <span className="learning-lock-reason">{item.lockReason}</span>
+                  </div>
+                  <SidebarStatusIcon status={item.status} />
                 </div>
-                <SidebarStatusIcon status={item.status} />
-              </Link>
+              ) : (
+                <Link
+                  key={item.id}
+                  className={`learning-outline-item ${item.id === currentContentId ? "is-active" : ""}`}
+                  to={buildLearningRoute(course.id, item)}
+                >
+                  <div className="learning-outline-copy">
+                    <span className="learning-outline-title">{item.title}</span>
+                    {item.attachments?.length ? (
+                      <div className="learning-attachments">
+                        {item.attachments.map((attachment) => (
+                          <span className="learning-attachment-label" key={attachment.id}>
+                            <AttachmentIcon />
+                            <span>{attachment.label}</span>
+                          </span>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                  <SidebarStatusIcon status={item.status} />
+                </Link>
+              )
             ))}
           </div>
         </>
@@ -129,12 +152,12 @@ function LearningSidebar({ course, currentContentId, isOpen, onToggle }) {
   );
 }
 
-function LearningFooterAction({ label, to, onClick }) {
+function LearningFooterAction({ label, onClick, disabled = false }) {
   return (
-    <Link className="learning-footer-button" to={to} onClick={onClick}>
+    <button type="button" className="learning-footer-button" onClick={onClick} disabled={disabled}>
       <span>{label}</span>
       <BackArrowIcon />
-    </Link>
+    </button>
   );
 }
 
@@ -201,7 +224,6 @@ function LearningMainContent({
         <div className="learning-footer-actions">
           <LearningFooterAction
             label={nextContent ? "Next Content" : "Complete this course"}
-            to={nextContent ? buildLearningRoute(course.id, nextContent) : `/courses/${course.id}`}
             onClick={onAdvanceContent}
           />
         </div>
@@ -220,7 +242,6 @@ function LearningMainContent({
         <div className="learning-footer-actions">
           <LearningFooterAction
             label={nextContent ? "Next Content" : "Complete this course"}
-            to={nextContent ? buildLearningRoute(course.id, nextContent) : `/courses/${course.id}`}
             onClick={onAdvanceContent}
           />
         </div>
@@ -259,8 +280,7 @@ function LearningMainContent({
         </div>
         <div className="learning-footer-actions">
           <LearningFooterAction
-            label={nextContent ? "Complete this course" : "Complete this course"}
-            to={nextContent ? buildLearningRoute(course.id, nextContent) : `/courses/${course.id}`}
+            label={nextContent ? "Next Content" : "Complete this course"}
             onClick={onAdvanceContent}
           />
         </div>
@@ -283,7 +303,6 @@ function LearningMainContent({
         <div className="learning-footer-actions">
           <LearningFooterAction
             label={nextContent ? "Next Content" : "Complete this course"}
-            to={nextContent ? buildLearningRoute(course.id, nextContent) : `/courses/${course.id}`}
             onClick={onAdvanceContent}
           />
         </div>
@@ -324,13 +343,8 @@ function LearningMainContent({
       <div className="learning-footer-actions">
         <LearningFooterAction
           label={isFinalQuestion ? "Complete this course" : "Next Content"}
-          to={
-            isFinalQuestion
-              ? `/courses/${course.id}`
-              : nextContent
-                ? buildLearningRoute(course.id, nextContent)
-                : `/courses/${course.id}`
-          }
+          onClick={onAdvanceContent}
+          disabled
         />
       </div>
     </>
@@ -343,11 +357,17 @@ export default function LessonPlayerPage() {
   const { courseId, contentId, mode, questionIndex } = useParams();
   const { token } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [course, setCourse] = useState(() => getCourseDetailMock(courseId));
+  const [course, setCourse] = useState({
+    id: courseId,
+    title: "",
+    progress: { completionPercentage: 0 },
+    contentItems: [],
+  });
   const [quizSelections, setQuizSelections] = useState({});
   const [quizReward, setQuizReward] = useState(null);
   const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false);
   const [contentOverride, setContentOverride] = useState(null);
+  const [contentAccessError, setContentAccessError] = useState("");
   const [loadError, setLoadError] = useState("");
   const [quizError, setQuizError] = useState("");
   const [isLoadingCourse, setIsLoadingCourse] = useState(true);
@@ -363,10 +383,15 @@ export default function LessonPlayerPage() {
           setCourse(response);
           setLoadError("");
         }
-      } catch {
+      } catch (error) {
         if (isMounted) {
-          setCourse(getCourseDetailMock(courseId));
-          setLoadError("Live lesson data could not be loaded. Showing fallback learning content.");
+          setCourse({
+            id: courseId,
+            title: "",
+            progress: { completionPercentage: 0 },
+            contentItems: [],
+          });
+          setLoadError(error.message || "Live lesson data could not be loaded.");
         }
       } finally {
         if (isMounted) {
@@ -392,10 +417,13 @@ export default function LessonPlayerPage() {
         const response = await fetchCourseContentRequest(courseId, contentId, token);
         if (isMounted) {
           setContentOverride(response.contentItem);
+          setContentAccessError("");
+          setQuizError("");
         }
-      } catch {
+      } catch (error) {
         if (isMounted) {
           setContentOverride(null);
+          setContentAccessError(error.message || "This learning content is currently unavailable.");
         }
       }
     };
@@ -409,12 +437,14 @@ export default function LessonPlayerPage() {
     };
   }, [contentId, courseId, token]);
 
-  const contentItem = course.contentItems.find((item) => item.id === contentId) ?? course.contentItems[0];
+  const contentItem = course.contentItems.find((item) => item.id === contentId) ?? null;
   const resolvedContentItem = contentOverride
-    ? {
+    ? contentItem
+      ? {
         ...contentItem,
         ...contentOverride,
       }
+      : contentOverride
     : contentItem;
 
   const handleSelectQuizOption = (questionId, optionIndex) => {
@@ -459,30 +489,33 @@ export default function LessonPlayerPage() {
     }
   };
 
-  const handleAdvanceContent = async (event) => {
-    if (
-      !resolvedContentItem ||
-      resolvedContentItem.mode === LEARNING_CONTENT_MODE.QUIZ ||
-      !token
-    ) {
+  const handleAdvanceContent = async () => {
+    if (!resolvedContentItem) {
+      navigate(`/courses/${course.id}`);
       return;
     }
 
     try {
-      const response = await updateCourseContentProgressRequest(course.id, resolvedContentItem.id, token, {
-        status: "completed",
-        lastPosition: 100,
-      });
+      if (resolvedContentItem.mode !== LEARNING_CONTENT_MODE.QUIZ && token) {
+        await updateCourseContentProgressRequest(course.id, resolvedContentItem.id, token, {
+          status: "completed",
+          lastPosition: 100,
+        });
+      }
 
-      setCourse((current) => ({
-        ...current,
-        progress: response.progress ?? current.progress,
-        contentItems: current.contentItems.map((item) =>
-          item.id === response.contentItem?.id ? { ...item, ...response.contentItem } : item,
-        ),
-      }));
+      const refreshedCourse = token ? await fetchCourseDetailRequest(course.id, token) : course;
+      setCourse(refreshedCourse);
+      const nextContent = resolvedContentItem.nextContentId
+        ? refreshedCourse.contentItems.find((item) => item.id === resolvedContentItem.nextContentId)
+        : null;
+
+      if (nextContent && !nextContent.isLocked) {
+        navigate(buildLearningRoute(course.id, nextContent));
+        return;
+      }
+
+      navigate(`/courses/${course.id}`);
     } catch (error) {
-      event.preventDefault();
       setQuizError(error.message || "Could not move to the next content item.");
     }
   };
@@ -513,10 +546,25 @@ export default function LessonPlayerPage() {
             message={quizError}
             onClose={() => setQuizError("")}
           />
+          <StatusBanner
+            tone="error"
+            message={contentAccessError}
+            onClose={() => setContentAccessError("")}
+          />
           {isLoadingCourse ? (
             <LoadingBlock
               title="Loading learning player"
               description="Preparing your content, progress, and lesson outline."
+            />
+          ) : contentAccessError ? (
+            <EmptyState
+              title="This content is locked"
+              description={contentAccessError}
+              action={
+                <Link className="catalog-action-button instructor-cta-button" to={`/courses/${course.id}`}>
+                  Back to Course
+                </Link>
+              }
             />
           ) : resolvedContentItem ? (
           <LearningMainContent

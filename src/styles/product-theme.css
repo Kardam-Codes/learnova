@@ -162,6 +162,87 @@
   border-width: 1px !important;
 }
 
+.catalog-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.catalog-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.catalog-section-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.course-summary-action {
+  margin-top: 18px;
+}
+
+.course-lock-panel,
+.payment-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--panel);
+  box-shadow: var(--surface-shadow-soft);
+}
+
+.payment-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 520px;
+}
+
+.payment-price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel-muted);
+  font-size: 18px;
+}
+
+.content-row.is-locked,
+.learning-outline-item.is-locked {
+  opacity: 0.82;
+  cursor: not-allowed;
+}
+
+.content-lock-reason,
+.learning-lock-reason {
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.learning-footer-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  background: var(--primary);
+  color: white;
+  cursor: pointer;
+}
+
+.learning-footer-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .reporting-layout-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 280px;

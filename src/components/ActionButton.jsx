@@ -11,9 +11,21 @@ export default function ActionButton({ action, onClick }) {
   const actionClassName = `catalog-action-button is-${action.type}`;
   const label =
     action.type === COURSE_ACCESS_STATE.START ? "Start Course" : action.label;
+  const handleClick = (event) => {
+    onClick?.(event);
+    action.onClick?.(event);
+  };
+
+  if (action.onClick || !action.to) {
+    return (
+      <button type="button" className={actionClassName} onClick={handleClick} disabled={action.disabled}>
+        {label}
+      </button>
+    );
+  }
 
   return (
-    <Link className={actionClassName} to={action.to} onClick={onClick}>
+    <Link className={actionClassName} to={action.to} onClick={handleClick}>
       {label}
     </Link>
   );

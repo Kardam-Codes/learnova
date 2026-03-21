@@ -10,7 +10,6 @@ import CourseTabs from "../components/CourseTabs";
 import StatusBanner from "../components/StatusBanner";
 import EmptyState from "../components/EmptyState";
 import LoadingBlock from "../components/LoadingBlock";
-import { getCourseDetailMock } from "../data/courseDetailMock";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -19,6 +18,29 @@ import {
   submitCourseReviewRequest,
 } from "../utils/apiClient";
 import { useEffect, useState } from "react";
+
+const EMPTY_COURSE = {
+  id: "",
+  title: "",
+  shortDescription: "",
+  thumbnail: "",
+  providerName: "Learnova",
+  learnerName: "",
+  isEnrolled: false,
+  progress: {
+    completionPercentage: 0,
+    totalCount: 0,
+    completedCount: 0,
+    incompleteCount: 0,
+  },
+  reviews: {
+    averageRating: 0,
+    totalReviews: 0,
+    items: [],
+    learnerDraft: "",
+    isEnrolled: false,
+  },
+};
 
 function StarIcon({ filled }) {
   return (
@@ -44,7 +66,7 @@ function ReviewStars({ rating }) {
 export default function CourseReviewsPage({ theme, toggleTheme }) {
   const { courseId } = useParams();
   const { token } = useAuth();
-  const [course, setCourse] = useState(() => getCourseDetailMock(courseId));
+  const [course, setCourse] = useState(EMPTY_COURSE);
   const [reviewDraft, setReviewDraft] = useState(course.reviews.learnerDraft);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewError, setReviewError] = useState("");
@@ -74,10 +96,10 @@ export default function CourseReviewsPage({ theme, toggleTheme }) {
         });
         setReviewDraft(reviewsResponse.learnerDraft ?? "");
         setLoadError("");
-      } catch {
+      } catch (error) {
         if (isMounted) {
-          setCourse(getCourseDetailMock(courseId));
-          setLoadError("Live reviews could not be loaded. Showing fallback review data.");
+          setCourse(EMPTY_COURSE);
+          setLoadError(error.message || "Live reviews could not be loaded.");
         }
       } finally {
         if (isMounted) {
@@ -96,6 +118,11 @@ export default function CourseReviewsPage({ theme, toggleTheme }) {
   }, [courseId, token]);
 
   const handleReviewSubmit = async () => {
+    if (!course.isEnrolled) {
+      setReviewError("Enroll in this course before posting a review.");
+      return;
+    }
+
     setIsSavingReview(true);
     setReviewError("");
     setReviewSuccess("");
@@ -160,7 +187,7 @@ export default function CourseReviewsPage({ theme, toggleTheme }) {
 
           <section className="reviews-content">
           <div className="reviews-summary-card">
-            <div className="reviews-score-block">
+          <div className="reviews-score-block">
               <strong>{course.reviews.averageRating.toFixed(1)}</strong>
               <ReviewStars rating={course.reviews.averageRating} />
             </div>
@@ -168,11 +195,19 @@ export default function CourseReviewsPage({ theme, toggleTheme }) {
               type="button"
               className="catalog-action-button is-buy reviews-add-button"
               onClick={handleReviewSubmit}
-              disabled={isSavingReview || !reviewDraft.trim()}
+              disabled={isSavingReview || !reviewDraft.trim() || !course.isEnrolled}
             >
               {isSavingReview ? "Saving..." : "Add Review"}
             </button>
           </div>
+
+          {!course.isEnrolled ? (
+            <EmptyState
+              compact
+              title="Reviews unlock after enrollment"
+              description="Enroll in the course first, then return here to rate and review the learning experience."
+            />
+          ) : null}
 
           <section className="review-entry-card">
             <div className="review-entry-header">
@@ -203,6 +238,7 @@ export default function CourseReviewsPage({ theme, toggleTheme }) {
               value={reviewDraft}
               onChange={(event) => setReviewDraft(event.target.value)}
               aria-label="Write your review"
+              disabled={!course.isEnrolled}
               placeholder="Share what worked well, what could improve, and how this course helped you."
             />
           </section>

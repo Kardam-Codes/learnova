@@ -13,18 +13,27 @@ import ProfilePanel from "../components/ProfilePanel";
 import StatusBanner from "../components/StatusBanner";
 import EmptyState from "../components/EmptyState";
 import LoadingBlock from "../components/LoadingBlock";
-import { learnerProfileMock, myCoursesMock } from "../data/myCoursesMock";
 import { useAuth } from "../context/AuthContext";
-import { fetchCoursesRequest } from "../utils/apiClient";
+import { enrollCourseRequest, fetchCoursesRequest } from "../utils/apiClient";
+
+const EMPTY_PROFILE = {
+  learnerName: "Learner",
+  totalPoints: 0,
+  currentBadge: "Newbie",
+  badgeTiers: [],
+};
 
 export default function MyCoursesPage({ theme, toggleTheme }) {
   const { token, user } = useAuth();
   const [query, setQuery] = useState("");
   const [catalogData, setCatalogData] = useState({
-    profile: learnerProfileMock,
-    courses: myCoursesMock,
+    profile: EMPTY_PROFILE,
+    courses: [],
+    enrolledCourses: [],
+    availableCourses: [],
   });
   const [loadError, setLoadError] = useState("");
+  const [actionMessage, setActionMessage] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const normalizedQuery = query.trim().toLowerCase();
 
@@ -42,18 +51,27 @@ export default function MyCoursesPage({ theme, toggleTheme }) {
         setCatalogData({
           profile: {
             ...response.profile,
-            learnerName: response.profile.learnerName || user?.name || learnerProfileMock.learnerName,
+            learnerName: response.profile.learnerName || user?.name || EMPTY_PROFILE.learnerName,
           },
-          courses: response.courses,
+          courses: response.courses ?? response.enrolledCourses ?? [],
+          enrolledCourses: response.enrolledCourses ?? response.courses ?? [],
+          availableCourses: response.availableCourses ?? [],
         });
         setLoadError("");
       } catch {
         if (!isMounted) {
           return;
         }
-
-        setCatalogData((current) => current);
-        setLoadError("Live catalog data could not be loaded. Showing fallback course data.");
+        setCatalogData({
+          profile: {
+            ...EMPTY_PROFILE,
+            learnerName: user?.name || EMPTY_PROFILE.learnerName,
+          },
+          courses: [],
+          enrolledCourses: [],
+          availableCourses: [],
+        });
+        setLoadError("Live catalog data could not be loaded right now.");
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -70,7 +88,7 @@ export default function MyCoursesPage({ theme, toggleTheme }) {
     };
   }, [token, user?.name]);
 
-  const filteredCourses = catalogData.courses.filter((course) => {
+  const matchesQuery = (course) => {
     if (!normalizedQuery) {
       return true;
     }
@@ -84,7 +102,30 @@ export default function MyCoursesPage({ theme, toggleTheme }) {
       .toLowerCase();
 
     return searchTarget.includes(normalizedQuery);
-  });
+  };
+
+  const filteredEnrolledCourses = catalogData.enrolledCourses.filter(matchesQuery);
+  const filteredAvailableCourses = catalogData.availableCourses.filter(matchesQuery);
+
+  const handleEnrollCourse = async (course) => {
+    try {
+      await enrollCourseRequest(course.id, token);
+      const refreshed = await fetchCoursesRequest(token);
+      setCatalogData({
+        profile: {
+          ...refreshed.profile,
+          learnerName: refreshed.profile.learnerName || user?.name || EMPTY_PROFILE.learnerName,
+        },
+        courses: refreshed.courses ?? refreshed.enrolledCourses ?? [],
+        enrolledCourses: refreshed.enrolledCourses ?? refreshed.courses ?? [],
+        availableCourses: refreshed.availableCourses ?? [],
+      });
+      setActionMessage(`You are now enrolled in ${course.title}.`);
+      setLoadError("");
+    } catch (error) {
+      setLoadError(error.message || "Course enrollment could not be completed.");
+    }
+  };
 
   return (
     <main className="course-page-shell">
@@ -100,6 +141,11 @@ export default function MyCoursesPage({ theme, toggleTheme }) {
           tone={loadError ? "error" : "info"}
           message={loadError}
           onClose={() => setLoadError("")}
+        />
+        <StatusBanner
+          tone="success"
+          message={actionMessage}
+          onClose={() => setActionMessage("")}
         />
         <div className="my-courses-header">
           <div className="my-courses-heading">
@@ -117,19 +163,46 @@ export default function MyCoursesPage({ theme, toggleTheme }) {
         </div>
 
         <div className="my-courses-layout">
-          {isLoading ? (
-            <LoadingBlock
-              title="Loading your courses"
-              description="Fetching your enrolled and available courses."
-            />
-          ) : filteredCourses.length ? (
-            <CourseGrid courses={filteredCourses} />
-          ) : (
-            <EmptyState
-              title="No courses found"
-              description="Try a different search term or clear the filter to browse your full catalog."
-            />
-          )}
+          <div className="catalog-sections">
+            {isLoading ? (
+              <LoadingBlock
+                title="Loading your courses"
+                description="Fetching your enrolled and available courses."
+              />
+            ) : (
+              <>
+                <section className="catalog-section">
+                  <div className="catalog-section-header">
+                    <span className="eyebrow">Learning now</span>
+                    <h2>My Courses</h2>
+                  </div>
+                  {filteredEnrolledCourses.length ? (
+                    <CourseGrid courses={filteredEnrolledCourses} onEnrollCourse={handleEnrollCourse} />
+                  ) : (
+                    <EmptyState
+                      title="No enrolled courses yet"
+                      description="Enroll in a free course or complete a paid checkout to start building your learning path."
+                    />
+                  )}
+                </section>
+
+                <section className="catalog-section">
+                  <div className="catalog-section-header">
+                    <span className="eyebrow">Browse catalog</span>
+                    <h2>All Courses</h2>
+                  </div>
+                  {filteredAvailableCourses.length ? (
+                    <CourseGrid courses={filteredAvailableCourses} onEnrollCourse={handleEnrollCourse} />
+                  ) : (
+                    <EmptyState
+                      title="No additional courses found"
+                      description="Try a different search term or clear the search to browse the full published catalog."
+                    />
+                  )}
+                </section>
+              </>
+            )}
+          </div>
           <ProfilePanel profile={catalogData.profile} />
         </div>
       </div>

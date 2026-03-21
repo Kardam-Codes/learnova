@@ -85,6 +85,15 @@ export async function fetchCourseReviewsRequest(courseId, token) {
   return parseJsonResponse(response);
 }
 
+export async function enrollCourseRequest(courseId, token) {
+  const response = await fetch(`${API_BASE_URL}/courses/${courseId}/enroll`, {
+    method: "POST",
+    headers: buildHeaders(token),
+  });
+
+  return parseJsonResponse(response);
+}
+
 export async function submitCourseReviewRequest(courseId, token, payload) {
   const response = await fetch(`${API_BASE_URL}/courses/${courseId}/reviews`, {
     method: "POST",
@@ -102,6 +111,25 @@ export async function fetchCourseContentRequest(courseId, contentId, token) {
       headers: buildHeaders(token),
     },
   );
+
+  return parseJsonResponse(response);
+}
+
+export async function createCoursePaymentOrderRequest(courseId, token) {
+  const response = await fetch(`${API_BASE_URL}/courses/${courseId}/payments/order`, {
+    method: "POST",
+    headers: buildHeaders(token),
+  });
+
+  return parseJsonResponse(response);
+}
+
+export async function verifyCoursePaymentRequest(courseId, token, payload) {
+  const response = await fetch(`${API_BASE_URL}/courses/${courseId}/payments/verify`, {
+    method: "POST",
+    headers: buildHeaders(token),
+    body: JSON.stringify(payload),
+  });
 
   return parseJsonResponse(response);
 }
