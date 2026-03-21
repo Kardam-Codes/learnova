@@ -3,7 +3,6 @@ import ProgressPanel from "./ProgressPanel";
 export default function CourseHeader({ course }) {
   return (
     <section className="course-hero">
-      {/* Left column holds course identity and short explanation. */}
       <div className="course-summary">
         <img
           className="course-thumbnail"
@@ -16,13 +15,6 @@ export default function CourseHeader({ course }) {
           <p>{course.shortDescription}</p>
         </div>
       </div>
-
-      {/* Center panel acts as the large editorial cover image. */}
-      <div className="course-cover-panel">
-        <img src={course.coverImage} alt={`${course.title} cover`} />
-      </div>
-
-      {/* Right column is reserved for learner progress and stat cards. */}
       <ProgressPanel progress={course.progress} />
     </section>
   );

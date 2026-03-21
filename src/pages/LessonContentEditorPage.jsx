@@ -6,7 +6,10 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import ConfirmDialog from "../components/ConfirmDialog";
+import LoadingBlock from "../components/LoadingBlock";
 import InstructorNavbar from "../components/InstructorNavbar";
+import StatusBanner from "../components/StatusBanner";
 import { getContentEditorMock } from "../data/instructorMock";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -268,7 +271,7 @@ function AdditionalAttachmentTab({ content, updateField, onUploadAttachment, isU
   );
 }
 
-export default function LessonContentEditorPage() {
+export default function LessonContentEditorPage({ theme, toggleTheme }) {
   const { contentId = "video-advanced-sales" } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -285,12 +288,16 @@ export default function LessonContentEditorPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingAsset, setIsUploadingAsset] = useState(false);
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const isNewContent = contentId === "new-content";
 
   useEffect(() => {
     let isMounted = true;
 
     const loadContent = async () => {
+      setIsLoading(true);
       if (isNewContent) {
         try {
           const userResponse = await fetchAdminUsersRequest(token, ["super_admin", "admin", "instructor"]);
@@ -315,6 +322,7 @@ export default function LessonContentEditorPage() {
           attachmentFile: "",
           attachmentLink: "",
         });
+        setIsLoading(false);
         return;
       }
 
@@ -334,6 +342,10 @@ export default function LessonContentEditorPage() {
             duration: fallbackContent.duration ?? "",
           });
           setStatusMessage(error.message);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
         }
       }
     };
@@ -434,17 +446,21 @@ export default function LessonContentEditorPage() {
       return;
     }
 
+    setIsDeleting(true);
     try {
       await deleteAdminContentRequest(contentId, token);
       navigate(`/instructor/courses/${courseSlug}/edit`);
     } catch (error) {
       setStatusMessage(error.message);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
     }
   };
 
   return (
     <main className="course-page-shell instructor-page-shell">
-      <InstructorNavbar />
+      <InstructorNavbar theme={theme} toggleTheme={toggleTheme} />
 
       <div className="course-page-card instructor-shell">
         <section className="content-editor-shell">
@@ -463,7 +479,7 @@ export default function LessonContentEditorPage() {
             <button
               type="button"
               className="catalog-action-button instructor-ghost-button"
-              onClick={handleDelete}
+              onClick={() => setShowDeleteDialog(true)}
             >
               Delete
             </button>
@@ -477,8 +493,26 @@ export default function LessonContentEditorPage() {
             </button>
           </div>
 
-          {statusMessage ? <p className="content-empty">{statusMessage}</p> : null}
+          <StatusBanner
+            tone={
+              statusMessage?.toLowerCase().includes("successfully")
+                ? "success"
+                : statusMessage?.toLowerCase().includes("could not") ||
+                    statusMessage?.toLowerCase().includes("failed")
+                  ? "error"
+                  : "info"
+            }
+            message={statusMessage}
+            onClose={() => setStatusMessage("")}
+          />
 
+          {isLoading ? (
+            <LoadingBlock
+              title="Loading content editor"
+              description="Preparing lesson settings, uploads, and responsible user choices."
+            />
+          ) : (
+          <>
           <div className="instructor-tab-row" role="tablist" aria-label="Content editor tabs">
             {editorTabs.map((tab) => (
               <button
@@ -528,8 +562,20 @@ export default function LessonContentEditorPage() {
               />
             ) : null}
           </section>
+          </>
+          )}
         </section>
       </div>
+      {showDeleteDialog ? (
+        <ConfirmDialog
+          title="Delete content"
+          description="This content item will be removed from the course. This action cannot be undone."
+          confirmLabel="Delete content"
+          isSubmitting={isDeleting}
+          onConfirm={handleDelete}
+          onClose={() => setShowDeleteDialog(false)}
+        />
+      ) : null}
     </main>
   );
 }

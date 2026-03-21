@@ -4,7 +4,7 @@
  * Purpose: Provide one consistent navigation bar for all instructor and organiser pages.
  * What it is: A reusable instructor header with brand, primary navigation, and utility actions.
  */
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const navItems = [
@@ -13,8 +13,35 @@ const navItems = [
   { label: "Setting", to: "/instructor/courses/odoo-crm/edit" },
 ];
 
-export default function InstructorNavbar() {
-  const { user } = useAuth();
+function ThemeIcon({ theme }) {
+  if (theme === "light") {
+    return (
+      <svg className="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="4.5" fill="currentColor" />
+        <path
+          d="M12 2.5V5.5M12 18.5V21.5M21.5 12H18.5M5.5 12H2.5M18.7 5.3L16.6 7.4M7.4 16.6L5.3 18.7M18.7 18.7L16.6 16.6M7.4 7.4L5.3 5.3"
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeWidth="2"
+        />
+      </svg>
+    );
+  }
+
+  return (
+    <svg className="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M15.4 3.5C11.2 4 8 7.6 8 11.9c0 4.8 3.9 8.6 8.6 8.6 2.1 0 4.1-.7 5.7-2.1-1 .2-1.6.3-2.4.3-5 0-9.1-4.1-9.1-9.1 0-2.3.8-4.4 2.2-6.1 1-.1 1.5-.1 2.4 0z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+export default function InstructorNavbar({ theme, toggleTheme }) {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const displayName = user?.name ?? "Instructor";
 
   return (
@@ -37,14 +64,35 @@ export default function InstructorNavbar() {
         ))}
       </nav>
 
-      <div className="learner-badge instructor-user-badge" aria-label={`Signed in as ${displayName}`}>
-        <div className="learner-copy">
-          <span className="eyebrow">Signed in</span>
-          <strong>{displayName}</strong>
+      <div className="navbar-actions instructor-navbar-actions">
+        <button
+          type="button"
+          className="theme-toggle"
+          onClick={toggleTheme}
+          aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+          title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+        >
+          <ThemeIcon theme={theme} />
+        </button>
+        <div className="learner-badge instructor-user-badge" aria-label={`Signed in as ${displayName}`}>
+          <div className="learner-copy">
+            <span className="eyebrow">Signed in</span>
+            <strong>{displayName}</strong>
+          </div>
+          <div className="profile-avatar" aria-hidden="true">
+            {displayName.slice(0, 1)}
+          </div>
         </div>
-        <div className="profile-avatar" aria-hidden="true">
-          {displayName.slice(0, 1)}
-        </div>
+        <button
+          type="button"
+          className="navbar-text-button"
+          onClick={() => {
+            logout();
+            navigate("/auth/login");
+          }}
+        >
+          Sign Out
+        </button>
       </div>
     </header>
   );

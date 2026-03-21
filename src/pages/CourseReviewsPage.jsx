@@ -7,6 +7,9 @@
 import Navbar from "../components/Navbar";
 import CourseHeader from "../components/CourseHeader";
 import CourseTabs from "../components/CourseTabs";
+import StatusBanner from "../components/StatusBanner";
+import EmptyState from "../components/EmptyState";
+import LoadingBlock from "../components/LoadingBlock";
 import { getCourseDetailMock } from "../data/courseDetailMock";
 import { useParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -45,12 +48,16 @@ export default function CourseReviewsPage({ theme, toggleTheme }) {
   const [reviewDraft, setReviewDraft] = useState(course.reviews.learnerDraft);
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewError, setReviewError] = useState("");
+  const [reviewSuccess, setReviewSuccess] = useState("");
+  const [loadError, setLoadError] = useState("");
   const [isSavingReview, setIsSavingReview] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
 
     const loadCourseReviews = async () => {
+      setIsLoading(true);
       try {
         const [courseResponse, reviewsResponse] = await Promise.all([
           fetchCourseDetailRequest(courseId, token),
@@ -66,9 +73,15 @@ export default function CourseReviewsPage({ theme, toggleTheme }) {
           reviews: reviewsResponse,
         });
         setReviewDraft(reviewsResponse.learnerDraft ?? "");
+        setLoadError("");
       } catch {
         if (isMounted) {
           setCourse(getCourseDetailMock(courseId));
+          setLoadError("Live reviews could not be loaded. Showing fallback review data.");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
         }
       }
     };
@@ -85,6 +98,7 @@ export default function CourseReviewsPage({ theme, toggleTheme }) {
   const handleReviewSubmit = async () => {
     setIsSavingReview(true);
     setReviewError("");
+    setReviewSuccess("");
 
     try {
       const reviewsResponse = await submitCourseReviewRequest(courseId, token, {
@@ -96,6 +110,9 @@ export default function CourseReviewsPage({ theme, toggleTheme }) {
         ...current,
         reviews: reviewsResponse,
       }));
+      setReviewDraft("");
+      setReviewRating(5);
+      setReviewSuccess("Your review was saved successfully.");
     } catch (error) {
       setReviewError(error.message);
     } finally {
@@ -113,13 +130,35 @@ export default function CourseReviewsPage({ theme, toggleTheme }) {
       />
 
       <div className="course-page-card reviews-page-shell">
-        <CourseHeader course={course} />
+        <StatusBanner
+          tone={loadError ? "error" : "info"}
+          message={loadError}
+          onClose={() => setLoadError("")}
+        />
+        <StatusBanner
+          tone="success"
+          message={reviewSuccess}
+          onClose={() => setReviewSuccess("")}
+        />
+        <StatusBanner
+          tone="error"
+          message={reviewError}
+          onClose={() => setReviewError("")}
+        />
+        {isLoading ? (
+          <LoadingBlock
+            title="Loading ratings and reviews"
+            description="Pulling learner feedback and course sentiment."
+          />
+        ) : (
+          <>
+          <CourseHeader course={course} />
 
-        <div className="course-toolbar">
-          <CourseTabs courseId={course.id} />
-        </div>
+          <div className="course-toolbar">
+            <CourseTabs courseId={course.id} />
+          </div>
 
-        <section className="reviews-content">
+          <section className="reviews-content">
           <div className="reviews-summary-card">
             <div className="reviews-score-block">
               <strong>{course.reviews.averageRating.toFixed(1)}</strong>
@@ -129,7 +168,7 @@ export default function CourseReviewsPage({ theme, toggleTheme }) {
               type="button"
               className="catalog-action-button is-buy reviews-add-button"
               onClick={handleReviewSubmit}
-              disabled={isSavingReview}
+              disabled={isSavingReview || !reviewDraft.trim()}
             >
               {isSavingReview ? "Saving..." : "Add Review"}
             </button>
@@ -164,12 +203,12 @@ export default function CourseReviewsPage({ theme, toggleTheme }) {
               value={reviewDraft}
               onChange={(event) => setReviewDraft(event.target.value)}
               aria-label="Write your review"
+              placeholder="Share what worked well, what could improve, and how this course helped you."
             />
-            {reviewError ? <p className="content-empty">{reviewError}</p> : null}
           </section>
 
           <div className="review-list">
-            {course.reviews.items.map((review) => (
+            {course.reviews.items.length ? course.reviews.items.map((review) => (
               <article className="review-card" key={review.id}>
                 <div className="review-entry-header">
                   <div className="review-avatar" aria-hidden="true">
@@ -185,9 +224,17 @@ export default function CourseReviewsPage({ theme, toggleTheme }) {
                 </div>
                 <p>{review.comment}</p>
               </article>
-            ))}
+            )) : (
+              <EmptyState
+                compact
+                title="No reviews yet"
+                description="Be the first learner to share feedback for this course."
+              />
+            )}
           </div>
-        </section>
+          </section>
+          </>
+        )}
       </div>
     </main>
   );

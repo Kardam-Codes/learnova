@@ -106,6 +106,19 @@ export async function fetchCourseContentRequest(courseId, contentId, token) {
   return parseJsonResponse(response);
 }
 
+export async function updateCourseContentProgressRequest(courseId, contentId, token, payload) {
+  const response = await fetch(
+    `${API_BASE_URL}/courses/${courseId}/content/${contentId}/progress`,
+    {
+      method: "POST",
+      headers: buildHeaders(token),
+      body: JSON.stringify(payload),
+    },
+  );
+
+  return parseJsonResponse(response);
+}
+
 export async function fetchQuizRequest(courseId, contentId, token) {
   const response = await fetch(
     `${API_BASE_URL}/courses/${courseId}/quizzes/${contentId}`,

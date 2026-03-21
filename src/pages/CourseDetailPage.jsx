@@ -11,6 +11,8 @@ import CourseHeader from "../components/CourseHeader";
 import CourseTabs from "../components/CourseTabs";
 import ContentSearch from "../components/ContentSearch";
 import ContentList from "../components/ContentList";
+import StatusBanner from "../components/StatusBanner";
+import LoadingBlock from "../components/LoadingBlock";
 import { useAuth } from "../context/AuthContext";
 import { fetchCourseDetailRequest } from "../utils/apiClient";
 import { getCourseDetailMock } from "../data/courseDetailMock";
@@ -20,19 +22,28 @@ export default function CourseDetailPage({ theme, toggleTheme }) {
   const { token } = useAuth();
   const [query, setQuery] = useState("");
   const [course, setCourse] = useState(() => getCourseDetailMock(courseId));
+  const [loadError, setLoadError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
 
     const loadCourse = async () => {
+      setIsLoading(true);
       try {
         const response = await fetchCourseDetailRequest(courseId, token);
         if (isMounted) {
           setCourse(response);
+          setLoadError("");
         }
       } catch {
         if (isMounted) {
           setCourse(getCourseDetailMock(courseId));
+          setLoadError("Live course details could not be loaded. Showing fallback content.");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
         }
       }
     };
@@ -64,6 +75,18 @@ export default function CourseDetailPage({ theme, toggleTheme }) {
       />
 
       <div className="course-page-card">
+        <StatusBanner
+          tone={loadError ? "error" : "info"}
+          message={loadError}
+          onClose={() => setLoadError("")}
+        />
+        {isLoading ? (
+          <LoadingBlock
+            title="Loading course details"
+            description="Preparing the course overview, progress, and content list."
+          />
+        ) : (
+          <>
         <CourseHeader course={course} />
 
         <div className="course-toolbar">
@@ -75,6 +98,8 @@ export default function CourseDetailPage({ theme, toggleTheme }) {
           items={filteredItems}
           totalCount={course.progress.totalCount}
         />
+          </>
+        )}
       </div>
     </main>
   );

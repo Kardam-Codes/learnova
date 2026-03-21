@@ -12,13 +12,14 @@ export default function PointsCircle({ totalPoints, currentBadge }) {
     <div
       className="points-circle"
       style={{
-        background: `conic-gradient(var(--pink) ${percentage}%, var(--panel) ${percentage}% 100%)`,
+        borderColor: "var(--primary)",
       }}
     >
       <div className="points-circle-inner">
         <strong>{totalPoints}</strong>
         <span>Points</span>
         <small>{currentBadge}</small>
+        <em>{Math.round(percentage)}% to master track</em>
       </div>
     </div>
   );

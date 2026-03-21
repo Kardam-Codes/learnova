@@ -12,9 +12,9 @@ import AuthCard from "../components/AuthCard";
 import InputField from "../components/InputField";
 import PasswordField from "../components/PasswordField";
 import SelectField from "../components/SelectField";
-import ErrorMessage from "../components/ErrorMessage";
 import Modal from "../components/Modal";
 import GoogleSignInButton from "../components/GoogleSignInButton";
+import StatusBanner from "../components/StatusBanner";
 
 const ROLE_OPTIONS = [
   { value: "learner", label: "Learner" },
@@ -68,6 +68,7 @@ export default function LoginPage() {
     <AuthLayout>
       <AuthCard
         title="Login"
+        subtitle="Sign in to continue into your learner or instructor workspace."
         footer={
           <div className="auth-link-stack">
             <Link className="auth-link" to="/auth/forgot-password">
@@ -80,6 +81,7 @@ export default function LoginPage() {
         }
       >
         <form className="auth-form" onSubmit={handleSubmit}>
+          <StatusBanner tone="error" message={error} onClose={() => setError("")} />
           <InputField
             id="login-email"
             label="Email"
@@ -102,7 +104,6 @@ export default function LoginPage() {
             onChange={setRole}
             options={ROLE_OPTIONS}
           />
-          <ErrorMessage message={error} />
           <button type="submit" className="auth-primary-button" disabled={isSubmitting}>
             {isSubmitting ? "Signing In..." : "Sign In"}
           </button>
@@ -118,6 +119,11 @@ export default function LoginPage() {
       {showForgotPassword ? (
         <Modal title="Forgot Password" onClose={() => navigate("/auth/login")}>
           <div className="forgot-password-content">
+            <StatusBanner
+              tone="info"
+              message="Password reset email wiring is the next backend step. For now, use a known account or create a new one."
+              onClose={() => navigate("/auth/login")}
+            />
             <InputField
               id="forgot-email"
               label="Email"
@@ -126,9 +132,6 @@ export default function LoginPage() {
               onChange={setForgotEmail}
               placeholder="Enter your registered email"
             />
-            <p>
-              Backend email reset wiring will be connected later.
-            </p>
             <button type="button" className="auth-primary-button" onClick={() => navigate("/auth/login")}>
               Send Reset Link
             </button>

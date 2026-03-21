@@ -4,9 +4,14 @@
  * Purpose: Render the instructor course configuration page with screenshot-aligned tabs and actions.
  * What it is: A route-level admin page for editing live course metadata, content, options, quizzes, and attendees.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import ConfirmDialog from "../components/ConfirmDialog";
+import EmptyState from "../components/EmptyState";
+import LoadingBlock from "../components/LoadingBlock";
+import InviteAttendeeModal from "../components/InviteAttendeeModal";
 import InstructorNavbar from "../components/InstructorNavbar";
+import StatusBanner from "../components/StatusBanner";
 import { getCourseConfigMock } from "../data/instructorMock";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -18,6 +23,7 @@ import {
   fetchAdminCourseRequest,
   fetchAdminUsersRequest,
   publishAdminCourseRequest,
+  uploadAdminFileRequest,
   updateAdminCourseRequest,
 } from "../utils/apiClient";
 
@@ -77,7 +83,7 @@ function mapCourseToFormState(course) {
   };
 }
 
-export default function CourseConfig() {
+export default function CourseConfig({ theme, toggleTheme }) {
   const { courseId = "odoo-crm" } = useParams();
   const navigate = useNavigate();
   const { token } = useAuth();
@@ -95,16 +101,26 @@ export default function CourseConfig() {
   const [quizzes, setQuizzes] = useState([]);
   const [attendees, setAttendees] = useState([]);
   const [adminUsers, setAdminUsers] = useState([]);
-  const [statusMessage, setStatusMessage] = useState("");
+  const [statusBanner, setStatusBanner] = useState(null);
   const [loadError, setLoadError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [isAddingAttendee, setIsAddingAttendee] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showRemoveImageDialog, setShowRemoveImageDialog] = useState(false);
+  const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
   const isNewCourse = courseId === "new-course";
+  const thumbnailInputRef = useRef(null);
+  const thumbnailFileInputRef = useRef(null);
+  const coverFileInputRef = useRef(null);
 
   useEffect(() => {
     let isMounted = true;
 
     const loadCourse = async () => {
       if (isNewCourse) {
+        setIsLoading(true);
         setCourseForm((current) => ({
           ...current,
           ...emptyCourse,
@@ -122,11 +138,16 @@ export default function CourseConfig() {
           if (isMounted) {
             setLoadError(error.message);
           }
+        } finally {
+          if (isMounted) {
+            setIsLoading(false);
+          }
         }
         return;
       }
 
       try {
+        setIsLoading(true);
         const [courseResponse, contentResponse, quizResponse, attendeeResponse, userResponse] =
           await Promise.all([
             fetchAdminCourseRequest(courseId, token),
@@ -152,6 +173,10 @@ export default function CourseConfig() {
         }
 
         setLoadError(error.message);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
@@ -173,7 +198,7 @@ export default function CourseConfig() {
 
   const handleSaveCourse = async () => {
     setIsSaving(true);
-    setStatusMessage("");
+    setStatusBanner(null);
 
     const payload = {
       title: courseForm.title,
@@ -196,13 +221,19 @@ export default function CourseConfig() {
         : await updateAdminCourseRequest(courseId, token, payload);
 
       setCourseForm(mapCourseToFormState(response));
-      setStatusMessage("Course saved successfully.");
+      setStatusBanner({
+        tone: "success",
+        message: "Course saved successfully.",
+      });
 
       if (isNewCourse || response.slug !== courseId) {
         navigate(`/instructor/courses/${response.slug}/edit`, { replace: true });
       }
     } catch (error) {
-      setStatusMessage(error.message);
+      setStatusBanner({
+        tone: "error",
+        message: error.message,
+      });
     } finally {
       setIsSaving(false);
     }
@@ -224,41 +255,58 @@ export default function CourseConfig() {
         !courseForm.isPublished,
       );
       setCourseForm(mapCourseToFormState(response));
-      setStatusMessage(response.isPublished ? "Course published." : "Course moved to draft.");
+      setStatusBanner({
+        tone: "success",
+        message: response.isPublished ? "Course published." : "Course moved to draft.",
+      });
     } catch (error) {
-      setStatusMessage(error.message);
+      setStatusBanner({
+        tone: "error",
+        message: error.message,
+      });
     }
   };
 
-  const handleAddAttendee = async () => {
-    const email = window.prompt("Enter attendee email");
-    const name = window.prompt("Enter attendee name");
-
-    if (!email || !name) {
-      return;
-    }
-
+  const handleAddAttendee = async (attendee) => {
+    setIsAddingAttendee(true);
     try {
       const response = await addAdminCourseAttendeesRequest(courseForm.slug, token, {
-        attendees: [
-          {
-            email,
-            name,
-            enrollmentSource: "invited",
-            paymentStatus: courseForm.accessRule === "payment" ? "pending" : "not_required",
-          },
-        ],
+        attendees: [attendee],
       });
       setAttendees((current) => [...current, ...response.attendees]);
-      setStatusMessage("Attendee added successfully.");
+      setStatusBanner({
+        tone: "success",
+        message: "Attendee added successfully.",
+      });
+      setShowInviteModal(false);
     } catch (error) {
-      setStatusMessage(error.message);
+      setStatusBanner({
+        tone: "error",
+        message: error.message,
+      });
+    } finally {
+      setIsAddingAttendee(false);
     }
+  };
+
+  const handleRemoveImage = () => {
+    setCourseForm((current) => ({
+      ...current,
+      thumbnailUrl: "",
+    }));
+    setStatusBanner({
+      tone: "success",
+      message: "Course image removed.",
+    });
+    setShowRemoveImageDialog(false);
   };
 
   const handleContactAttendees = () => {
     if (!attendees.length) {
-      setStatusMessage("No attendees are available to contact yet.");
+      setStatusBanner({
+        tone: "info",
+        message: "No attendees are available to contact yet.",
+      });
       return;
     }
 
@@ -271,9 +319,33 @@ export default function CourseConfig() {
     window.location.href = `mailto:${mailtoList}?subject=${subject}`;
   };
 
+  const handleUploadCourseImage = async (file, fieldName, category) => {
+    if (!file) {
+      return;
+    }
+
+    const setUploading = fieldName === "thumbnailUrl" ? setIsUploadingThumbnail : setIsUploadingCover;
+    setUploading(true);
+    try {
+      const response = await uploadAdminFileRequest(token, file, category);
+      updateField(fieldName, response.url);
+      setStatusBanner({
+        tone: "success",
+        message: `${fieldName === "thumbnailUrl" ? "Course image" : "Cover image"} uploaded successfully.`,
+      });
+    } catch (error) {
+      setStatusBanner({
+        tone: "error",
+        message: error.message,
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <main className="course-page-shell instructor-page-shell">
-      <InstructorNavbar />
+      <InstructorNavbar theme={theme} toggleTheme={toggleTheme} />
 
       <div className="course-page-card instructor-shell">
         <section className="instructor-form-shell">
@@ -296,7 +368,7 @@ export default function CourseConfig() {
               <button
                 type="button"
                 className="catalog-action-button instructor-ghost-button"
-                onClick={handleAddAttendee}
+                onClick={() => setShowInviteModal(true)}
                 disabled={isNewCourse}
               >
                 Add Attendees
@@ -327,9 +399,26 @@ export default function CourseConfig() {
             </div>
           </div>
 
-          {statusMessage ? <p className="content-empty">{statusMessage}</p> : null}
-          {loadError ? <p className="content-empty">{loadError}</p> : null}
+          <StatusBanner
+            tone={statusBanner?.tone}
+            message={statusBanner?.message}
+            onClose={() => setStatusBanner(null)}
+          />
+          {loadError ? (
+            <StatusBanner
+              tone="error"
+              message={loadError}
+              onClose={() => setLoadError("")}
+            />
+          ) : null}
 
+          {isLoading ? (
+            <LoadingBlock
+              title="Loading course configuration"
+              description="Fetching course details, content, quizzes, attendees, and users."
+            />
+          ) : (
+          <>
           <div className="course-config-hero course-config-hero-compact">
             <div className="course-config-copy">
               <label className="instructor-field instructor-field-line">
@@ -370,13 +459,18 @@ export default function CourseConfig() {
 
             <aside className="course-image-card">
               <div className="course-image-actions">
-                <button type="button" aria-label="Edit image">
+                <button
+                  type="button"
+                  aria-label="Upload course image"
+                  onClick={() => thumbnailFileInputRef.current?.click()}
+                  disabled={isUploadingThumbnail}
+                >
                   <svg viewBox="0 0 24 24">
                     <path d="M4 16.5V20h3.5L18 9.5 14.5 6 4 16.5z" />
                     <path d="M13 7.5 16.5 11" />
                   </svg>
                 </button>
-                <button type="button" aria-label="Delete image">
+                <button type="button" aria-label="Delete image" onClick={() => setShowRemoveImageDialog(true)} disabled={!courseForm.thumbnailUrl}>
                   <svg viewBox="0 0 24 24">
                     <polyline points="3 6 5 6 21 6" />
                     <path d="M8 6V4h8v2" />
@@ -386,10 +480,49 @@ export default function CourseConfig() {
               </div>
               <strong>Course image</strong>
               <input
+                ref={thumbnailInputRef}
                 type="text"
                 value={courseForm.thumbnailUrl}
                 onChange={(event) => updateField("thumbnailUrl", event.target.value)}
                 placeholder="Thumbnail URL"
+              />
+              <input
+                ref={thumbnailFileInputRef}
+                type="file"
+                hidden
+                accept="image/*"
+                onChange={(event) =>
+                  handleUploadCourseImage(
+                    event.target.files?.[0],
+                    "thumbnailUrl",
+                    "course-images",
+                  )}
+              />
+              <input
+                type="text"
+                value={courseForm.coverImageUrl}
+                onChange={(event) => updateField("coverImageUrl", event.target.value)}
+                placeholder="Cover image URL"
+              />
+              <button
+                type="button"
+                className="catalog-action-button instructor-ghost-button"
+                onClick={() => coverFileInputRef.current?.click()}
+                disabled={isUploadingCover}
+              >
+                {isUploadingCover ? "Uploading Cover..." : "Upload Cover Image"}
+              </button>
+              <input
+                ref={coverFileInputRef}
+                type="file"
+                hidden
+                accept="image/*"
+                onChange={(event) =>
+                  handleUploadCourseImage(
+                    event.target.files?.[0],
+                    "coverImageUrl",
+                    "course-covers",
+                  )}
               />
             </aside>
           </div>
@@ -411,6 +544,7 @@ export default function CourseConfig() {
           <div className="instructor-panel">
             {activeTab === "Content" ? (
               <section className="instructor-table-shell">
+                {contentItems.length ? (
                 <div className="instructor-table instructor-content-table">
                   <div className="instructor-table-head">
                     <span>Content title</span>
@@ -438,6 +572,12 @@ export default function CourseConfig() {
                     </div>
                   ))}
                 </div>
+                ) : (
+                  <EmptyState
+                    title="No content added yet"
+                    description="Create your first lesson, document, or video to start building this course."
+                  />
+                )}
 
                 <Link
                   to={`/instructor/content/new-content/edit?course=${courseForm.slug}`}
@@ -539,6 +679,7 @@ export default function CourseConfig() {
 
             {activeTab === "Quiz" ? (
               <section className="instructor-table-shell">
+                {quizzes.length ? (
                 <div className="instructor-table">
                   <div className="instructor-table-head">
                     <span>Quiz title</span>
@@ -566,6 +707,12 @@ export default function CourseConfig() {
                     </div>
                   ))}
                 </div>
+                ) : (
+                  <EmptyState
+                    title="No quizzes created yet"
+                    description="Add a quiz to assess learners and power the reward flow."
+                  />
+                )}
 
                 <Link
                   to={`/instructor/quizzes/new-quiz/builder?course=${courseForm.slug}`}
@@ -576,8 +723,28 @@ export default function CourseConfig() {
               </section>
             ) : null}
           </div>
+          </>
+          )}
         </section>
       </div>
+
+      {showInviteModal ? (
+        <InviteAttendeeModal
+          accessRule={courseForm.accessRule}
+          isSubmitting={isAddingAttendee}
+          onClose={() => setShowInviteModal(false)}
+          onSubmit={handleAddAttendee}
+        />
+      ) : null}
+      {showRemoveImageDialog ? (
+        <ConfirmDialog
+          title="Remove course image"
+          description="This clears the current course thumbnail from the form. You can add a new one again before saving."
+          confirmLabel="Remove image"
+          onConfirm={handleRemoveImage}
+          onClose={() => setShowRemoveImageDialog(false)}
+        />
+      ) : null}
     </main>
   );
 }

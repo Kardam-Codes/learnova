@@ -12,8 +12,8 @@ import AuthCard from "../components/AuthCard";
 import InputField from "../components/InputField";
 import PasswordField from "../components/PasswordField";
 import SelectField from "../components/SelectField";
-import ErrorMessage from "../components/ErrorMessage";
 import GoogleSignInButton from "../components/GoogleSignInButton";
+import StatusBanner from "../components/StatusBanner";
 
 const ROLE_OPTIONS = [
   { value: "learner", label: "Learner" },
@@ -72,6 +72,7 @@ export default function SignupPage() {
     <AuthLayout>
       <AuthCard
         title="Sign Up"
+        subtitle="Create your Learnova account and choose the workspace that matches your role."
         footer={
           <div className="auth-link-stack">
             <Link className="auth-link" to="/auth/login">
@@ -81,6 +82,7 @@ export default function SignupPage() {
         }
       >
         <form className="auth-form" onSubmit={handleSubmit}>
+          <StatusBanner tone="error" message={error} onClose={() => setError("")} />
           <InputField
             id="signup-name"
             label="Name"
@@ -117,7 +119,6 @@ export default function SignupPage() {
             onChange={(value) => updateField("confirmPassword", value)}
             placeholder="Re-enter your password"
           />
-          <ErrorMessage message={error} />
           <button type="submit" className="auth-primary-button" disabled={isSubmitting}>
             {isSubmitting ? "Signing Up..." : "Sign Up"}
           </button>

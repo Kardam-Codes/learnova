@@ -44,6 +44,33 @@ def _safe_filename(filename: str) -> str:
     return cleaned or "upload.bin"
 
 
+def _parse_duration_to_minutes(duration_label: str | None) -> int:
+    if not duration_label:
+        return 0
+
+    normalized = duration_label.strip().lower()
+    match = re.search(r"(\d+)", normalized)
+    if not match:
+        return 0
+
+    value = int(match.group(1))
+    if "question" in normalized:
+        return value * 2
+    if "hour" in normalized:
+        return value * 60
+    return value
+
+
+def _format_duration_label(total_minutes: int) -> str:
+    if total_minutes <= 0:
+        return "-"
+    if total_minutes < 60:
+        return f"{total_minutes} min"
+    hours = total_minutes // 60
+    minutes = total_minutes % 60
+    return f"{hours}h {minutes:02d}m" if minutes else f"{hours}h"
+
+
 def _ensure_unique_course_slug(cursor, base_slug: str, exclude_course_id: str | None = None) -> str:
     slug = base_slug
     counter = 2
@@ -328,7 +355,9 @@ def _serialize_course(cursor, course_slug: str) -> dict[str, Any]:
           creator.name AS created_by_name,
           responsible.name AS responsible_name,
           COALESCE(attendee_stats.attendee_count, 0) AS attendee_count,
-          COALESCE(content_stats.content_count, 0) AS content_count
+          COALESCE(content_stats.content_count, 0) AS content_count,
+          COALESCE(content_stats.duration_minutes, 0) AS duration_minutes,
+          COALESCE(view_stats.views_count, 0) AS views_count
         FROM courses c
         LEFT JOIN users creator ON creator.id = c.created_by
         LEFT JOIN users responsible ON responsible.id = c.responsible_user_id
@@ -338,10 +367,29 @@ def _serialize_course(cursor, course_slug: str) -> dict[str, Any]:
           GROUP BY course_id
         ) attendee_stats ON attendee_stats.course_id = c.id
         LEFT JOIN (
-          SELECT course_id, COUNT(*) AS content_count
+          SELECT
+            course_id,
+            COUNT(*) AS content_count,
+            SUM(
+              CASE
+                WHEN duration_label ~* '[0-9]+' THEN
+                  CASE
+                    WHEN duration_label ILIKE '%question%' THEN CAST(regexp_replace(duration_label, '[^0-9]', '', 'g') AS INTEGER) * 2
+                    WHEN duration_label ILIKE '%hour%' THEN CAST(regexp_replace(duration_label, '[^0-9]', '', 'g') AS INTEGER) * 60
+                    ELSE CAST(regexp_replace(duration_label, '[^0-9]', '', 'g') AS INTEGER)
+                  END
+                ELSE 0
+              END
+            ) AS duration_minutes
           FROM course_content
           GROUP BY course_id
         ) content_stats ON content_stats.course_id = c.id
+        LEFT JOIN (
+          SELECT course_id, COUNT(*) AS views_count
+          FROM course_progress
+          WHERE status IN ('in_progress', 'completed')
+          GROUP BY course_id
+        ) view_stats ON view_stats.course_id = c.id
         WHERE c.slug = %s;
         """,
         (course_slug,),
@@ -381,6 +429,9 @@ def _serialize_course(cursor, course_slug: str) -> dict[str, Any]:
         "tags": [row["name"] for row in tag_rows],
         "attendeeCount": int(course_row["attendee_count"]),
         "contentCount": int(course_row["content_count"]),
+        "durationMinutes": int(course_row["duration_minutes"] or 0),
+        "durationLabel": _format_duration_label(int(course_row["duration_minutes"] or 0)),
+        "viewsCount": int(course_row["views_count"] or 0),
     }
 
 

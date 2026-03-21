@@ -1,4 +1,5 @@
 import ContentRow from "./ContentRow";
+import EmptyState from "./EmptyState";
 
 export default function ContentList({ items, totalCount }) {
   return (
@@ -13,10 +14,11 @@ export default function ContentList({ items, totalCount }) {
         {items.length > 0 ? (
           items.map((item) => <ContentRow key={item.id} item={item} />)
         ) : (
-          // Empty state helps when the title-only search returns no matches.
-          <div className="content-empty">
-            No content matched your search. Try a different title.
-          </div>
+          <EmptyState
+            compact
+            title="No content matched your search"
+            description="Try another lesson title or clear the search to view the full course outline."
+          />
         )}
       </div>
     </section>

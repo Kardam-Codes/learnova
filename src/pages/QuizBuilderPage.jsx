@@ -6,7 +6,10 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import ConfirmDialog from "../components/ConfirmDialog";
 import InstructorNavbar from "../components/InstructorNavbar";
+import LoadingBlock from "../components/LoadingBlock";
+import StatusBanner from "../components/StatusBanner";
 import { quizBuilderMock } from "../data/instructorMock";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -185,7 +188,7 @@ function mapQuizFromApi(quiz) {
   };
 }
 
-export default function QuizBuilderPage() {
+export default function QuizBuilderPage({ theme, toggleTheme }) {
   const { quizId = "new-quiz" } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -197,12 +200,16 @@ export default function QuizBuilderPage() {
   const [selectedQuestionId, setSelectedQuestionId] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const isNewQuiz = quizId === "new-quiz";
 
   useEffect(() => {
     let isMounted = true;
 
     const loadQuiz = async () => {
+      setIsLoading(true);
       if (isNewQuiz) {
         const nextQuiz = {
           ...buildInitialQuizState(),
@@ -210,6 +217,7 @@ export default function QuizBuilderPage() {
         };
         setQuiz(nextQuiz);
         setSelectedQuestionId(nextQuiz.questions[0].id);
+        setIsLoading(false);
         return;
       }
 
@@ -231,6 +239,10 @@ export default function QuizBuilderPage() {
         setQuiz(fallbackQuiz);
         setSelectedQuestionId(fallbackQuiz.questions[0]?.id ?? "");
         setStatusMessage(error.message);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
@@ -333,17 +345,21 @@ export default function QuizBuilderPage() {
       return;
     }
 
+    setIsDeleting(true);
     try {
       await deleteAdminQuizRequest(quiz.id, token);
       navigate(`/instructor/courses/${quiz.courseSlug || courseSlug}/edit`);
     } catch (error) {
       setStatusMessage(error.message);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
     }
   };
 
   return (
     <main className="course-page-shell instructor-page-shell">
-      <InstructorNavbar />
+      <InstructorNavbar theme={theme} toggleTheme={toggleTheme} />
 
       <div className="course-page-card instructor-shell">
         <section className="quiz-builder-shell quiz-builder-shell-annotated">
@@ -427,7 +443,7 @@ export default function QuizBuilderPage() {
               <button
                 type="button"
                 className="catalog-action-button instructor-ghost-button"
-                onClick={handleDelete}
+                onClick={() => setShowDeleteDialog(true)}
               >
                 Delete
               </button>
@@ -441,9 +457,26 @@ export default function QuizBuilderPage() {
               </button>
             </div>
 
-            {statusMessage ? <p className="content-empty">{statusMessage}</p> : null}
+            <StatusBanner
+              tone={
+                statusMessage?.toLowerCase().includes("successfully")
+                  ? "success"
+                  : statusMessage?.toLowerCase().includes("not")
+                    ? "error"
+                    : "info"
+              }
+              message={statusMessage}
+              onClose={() => setStatusMessage("")}
+            />
 
-            {panelMode === "question" && selectedQuestion ? (
+            {isLoading ? (
+              <LoadingBlock
+                title="Loading quiz builder"
+                description="Preparing questions, rewards, and quiz settings."
+              />
+            ) : null}
+
+            {!isLoading && panelMode === "question" && selectedQuestion ? (
               <QuestionEditor
                 questionIndex={selectedQuestionIndex}
                 question={selectedQuestion}
@@ -473,7 +506,7 @@ export default function QuizBuilderPage() {
               />
             ) : null}
 
-            {panelMode === "rewards" ? (
+            {!isLoading && panelMode === "rewards" ? (
               <RewardsEditor
                 rewards={quiz.rewards}
                 maxAttempts={quiz.maxAttempts}
@@ -497,6 +530,16 @@ export default function QuizBuilderPage() {
           </section>
         </section>
       </div>
+      {showDeleteDialog ? (
+        <ConfirmDialog
+          title="Delete quiz"
+          description="This quiz will be removed from the course and learners will no longer be able to attempt it."
+          confirmLabel="Delete quiz"
+          isSubmitting={isDeleting}
+          onConfirm={handleDelete}
+          onClose={() => setShowDeleteDialog(false)}
+        />
+      ) : null}
     </main>
   );
 }
