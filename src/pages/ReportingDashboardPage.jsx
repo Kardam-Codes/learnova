@@ -44,34 +44,47 @@ function SummaryIcon({ kind }) {
   );
 }
 
+function TableBadge({ label }) {
+  return <span className="reporting-section-chip">{label}</span>;
+}
+
 export default function ReportingDashboardPage() {
   return (
     <main className="course-page-shell instructor-page-shell">
       <InstructorNavbar />
 
       <div className="course-page-card instructor-shell">
-        <section className="reporting-shell">
-          <div className="reporting-label-row">
-            <span className="eyebrow">Overview</span>
+        <section className="reporting-shell reporting-shell-annotated">
+          <div className="reporting-section-row">
+            <TableBadge label="Overview" />
           </div>
 
-          <div className="report-summary-grid">
+          <div className="report-summary-grid report-summary-grid-annotated">
             {reportSummary.map((item) => (
-              <article key={item.id} className="report-summary-card">
-                <SummaryIcon kind={item.id} />
+              <article key={item.id} className="report-summary-card report-summary-card-annotated">
+                <div className="report-summary-icon-wrap">
+                  <SummaryIcon kind={item.id} />
+                </div>
                 <strong>{item.value}</strong>
                 <span>{item.label}</span>
               </article>
             ))}
           </div>
 
-          <div className="reporting-table-shell">
-            <div className="reporting-label-row">
-              <span className="eyebrow">Users</span>
+          <div className="reporting-table-shell reporting-table-shell-annotated">
+            <div className="reporting-section-row reporting-section-row-between">
+              <TableBadge label="Users" />
+              <span className="reporting-grid-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <line x1="3" y1="9" x2="21" y2="9" />
+                  <line x1="9" y1="3" x2="9" y2="21" />
+                </svg>
+              </span>
             </div>
 
             <div className="reporting-table">
-              <div className="reporting-table-head">
+              <div className="reporting-table-head reporting-table-head-annotated">
                 <span>S.No.</span>
                 <span>Course Name</span>
                 <span>Participant name</span>
@@ -84,7 +97,7 @@ export default function ReportingDashboardPage() {
               </div>
 
               {reportRows.map((row) => (
-                <div key={row.id} className="reporting-table-row">
+                <div key={row.id} className="reporting-table-row reporting-table-row-annotated">
                   <span>{row.id}</span>
                   <span>{row.courseName}</span>
                   <span>{row.participantName}</span>

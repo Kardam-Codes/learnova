@@ -76,11 +76,6 @@ export default function CourseConfig() {
                 <span>Tags:</span>
                 <input type="text" defaultValue={course.tags.join(", ")} />
               </label>
-
-              <label className="instructor-field instructor-field-short">
-                <span>Responsible:</span>
-                <input type="text" defaultValue={course.responsible} />
-              </label>
             </div>
 
             <aside className="course-image-card">
@@ -172,17 +167,17 @@ export default function CourseConfig() {
             ) : null}
 
             {activeTab === "Description" ? (
-              <section className="description-panel">
+              <section className="description-panel course-description-panel">
                 <p>{course.description}</p>
               </section>
             ) : null}
 
             {activeTab === "Options" ? (
-              <section className="options-panel-grid">
-                <div className="option-box">
+              <section className="options-panel-grid options-panel-grid-annotated">
+                <div className="option-box option-box-annotated">
                   <h3>Access course rights</h3>
 
-                  <label className="instructor-field">
+                  <label className="instructor-field options-select-field">
                     <span>Show course to:</span>
                     <select defaultValue={course.visibility}>
                       <option>Everyone</option>
@@ -190,7 +185,7 @@ export default function CourseConfig() {
                     </select>
                   </label>
 
-                  <div className="options-checkbox-row">
+                  <div className="options-checkbox-row options-checkbox-row-annotated">
                     <span>Access rules:</span>
                     <label>
                       <input type="checkbox" defaultChecked={course.accessRules.open} />
@@ -209,16 +204,16 @@ export default function CourseConfig() {
                     </label>
                   </div>
 
-                  <label className="instructor-field instructor-field-short">
+                  <label className="instructor-field instructor-field-short option-price-field">
                     <span>Price:</span>
                     <input type="text" defaultValue={course.price} />
                   </label>
                 </div>
 
-                <div className="option-box">
+                <div className="option-box option-box-annotated">
                   <h3>Responsible</h3>
 
-                  <label className="instructor-field">
+                  <label className="instructor-field options-select-field options-admin-field">
                     <span>Course Admin:</span>
                     <select defaultValue={course.courseAdmin}>
                       {courseAdmins.map((admin) => (
