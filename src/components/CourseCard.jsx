@@ -6,10 +6,16 @@
  */
 import { useNavigate } from "react-router-dom";
 import { COURSE_ACCESS_STATE } from "../../shared/types/common_types";
+import { getCourseDetailMock } from "../data/courseDetailMock";
+import { buildLearningRoute } from "../utils/learningRoutes";
 import ActionButton from "./ActionButton";
 import TagBadge from "./TagBadge";
 
 function getCourseAction(course) {
+  const detail = getCourseDetailMock(course.id);
+  const firstContent = detail.contentItems.find((item) => item.id === course.firstContentId);
+  const lastContent = detail.contentItems.find((item) => item.id === course.lastContentId);
+
   if (!course.isLoggedIn) {
     return { label: "Join Course", to: "/my-courses", type: COURSE_ACCESS_STATE.JOIN };
   }
@@ -25,14 +31,14 @@ function getCourseAction(course) {
   if (course.isInProgress) {
     return {
       label: "Continue",
-      to: `/courses/${course.id}/content/${course.lastContentId}`,
+      to: buildLearningRoute(course.id, lastContent ?? detail.contentItems[0]),
       type: COURSE_ACCESS_STATE.CONTINUE,
     };
   }
 
   return {
     label: "Start Course",
-    to: `/courses/${course.id}/content/${course.firstContentId}`,
+    to: buildLearningRoute(course.id, firstContent ?? detail.contentItems[0]),
     type: COURSE_ACCESS_STATE.START,
   };
 }

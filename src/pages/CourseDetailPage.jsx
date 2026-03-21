@@ -13,7 +13,7 @@ import ContentSearch from "../components/ContentSearch";
 import ContentList from "../components/ContentList";
 import { getCourseDetailMock } from "../data/courseDetailMock";
 
-export default function CourseDetailPage() {
+export default function CourseDetailPage({ theme, toggleTheme }) {
   const { courseId = "odoo-crm" } = useParams();
   const [query, setQuery] = useState("");
   // Mock data is used for now so the UI can be reviewed before backend integration.
@@ -29,7 +29,12 @@ export default function CourseDetailPage() {
 
   return (
     <main className="course-page-shell">
-      <Navbar brandName={course.providerName} learnerName={course.learnerName} />
+      <Navbar
+        brandName={course.providerName}
+        learnerName={course.learnerName}
+        theme={theme}
+        toggleTheme={toggleTheme}
+      />
 
       <div className="course-page-card">
         <CourseHeader course={course} />
