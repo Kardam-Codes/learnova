@@ -10,6 +10,11 @@ This is a logical schema guide, not a finalized migration file.
 
 Concrete SQL version:
 - `backend/db/schema.sql`
+- `backend/db/seed.sql`
+- `backend/db/migrations/001_extensions_and_enums.sql`
+- `backend/db/migrations/002_core_entities.sql`
+- `backend/db/migrations/003_learning_progress_and_reviews.sql`
+- `backend/db/README.md`
 
 ---
 
@@ -38,6 +43,7 @@ Notes:
 
 Fields:
 - `id`
+- `slug`
 - `title`
 - `short_description`
 - `description`
@@ -56,6 +62,7 @@ Fields:
 Notes:
 - `visibility`: `everyone | signed_in`
 - `access_rule`: `open | invitation | payment`
+- `slug` supports route-friendly learner URLs
 
 ---
 
@@ -98,6 +105,7 @@ Notes:
 Fields:
 - `id`
 - `course_id`
+- `slug`
 - `title`
 - `content_type`
 - `content_mode`
@@ -113,6 +121,7 @@ Fields:
 Notes:
 - `content_type`: `lesson | quiz`
 - `content_mode`: `video | document | image | quiz`
+- `slug` supports stable per-content learner routes
 
 ---
 
@@ -342,3 +351,14 @@ It includes:
 - unique constraints
 - indexes
 - a reporting view for course-wise learner progress
+- route-friendly slug support for courses and content
+
+Seed/bootstrap support now exists in:
+
+```plaintext
+backend/db/seed.sql
+backend/db/migrations/001_extensions_and_enums.sql
+backend/db/migrations/002_core_entities.sql
+backend/db/migrations/003_learning_progress_and_reviews.sql
+backend/db/README.md
+```
