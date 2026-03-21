@@ -11,7 +11,7 @@ import {
 } from "../../shared/types/common_types";
 
 const sharedProvider = {
-  providerName: "KaiCrypt",
+  providerName: "Learnova",
   learnerName: "Kardam",
 };
 

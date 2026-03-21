@@ -6,11 +6,24 @@
  */
 import { useEffect, useState } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
+import { useAuth } from "./context/AuthContext";
+import LoginPage from "./pages/LoginPage";
+import SignupPage from "./pages/SignupPage";
 import MyCoursesPage from "./pages/MyCoursesPage";
 import CourseDetailPage from "./pages/CourseDetailPage";
 import CourseReviewsPage from "./pages/CourseReviewsPage";
 import LessonPlayerPage from "./pages/LessonPlayerPage";
 import PaymentFlowPage from "./pages/PaymentFlowPage";
+
+function ProtectedRoute({ children }) {
+  const { isAuthenticated } = useAuth();
+
+  if (!isAuthenticated) {
+    return <Navigate to="/auth/login" replace />;
+  }
+
+  return children;
+}
 
 export default function App() {
   // Light mode is the default, but learners can switch to dark mode from the navbar.
@@ -29,12 +42,19 @@ export default function App() {
 
   return (
     <Routes>
+      <Route path="/auth/login" element={<LoginPage />} />
+      <Route path="/auth/signup" element={<SignupPage />} />
+      <Route path="/auth/forgot-password" element={<LoginPage />} />
       {/* Default entry goes to the learner's main course dashboard. */}
       <Route path="/" element={<Navigate to="/my-courses" replace />} />
       {/* My Courses is the dashboard page with the course grid and profile panel. */}
       <Route
         path="/my-courses"
-        element={<MyCoursesPage theme={theme} toggleTheme={toggleTheme} />}
+        element={
+          <ProtectedRoute>
+            <MyCoursesPage theme={theme} toggleTheme={toggleTheme} />
+          </ProtectedRoute>
+        }
       />
       {/* Main learner-facing course overview page. */}
       <Route

@@ -35,7 +35,7 @@ export default function MyCoursesPage({ theme, toggleTheme }) {
   return (
     <main className="course-page-shell">
       <Navbar
-        brandName="KaiCrypt"
+        brandName="Learnova"
         learnerName={learnerProfileMock.learnerName}
         theme={theme}
         toggleTheme={toggleTheme}
