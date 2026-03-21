@@ -4,6 +4,19 @@
  * Purpose: Show the shared top navigation across learner-facing pages.
  * What it is: A reusable header with brand identity, learner account state, and theme switching.
  */
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+
+function BrandLogoIcon() {
+  return (
+    <svg viewBox="0 0 32 32" className="brand-logo-icon" aria-hidden="true">
+      <path d="M6 24V8h4v12h14v4Z" fill="currentColor" />
+      <path d="M12 8h14v4H16v14h-4Z" fill="currentColor" opacity="0.72" />
+      <path d="M20 14h6v12H14v-6h6Z" fill="none" stroke="currentColor" strokeWidth="2.6" />
+    </svg>
+  );
+}
+
 function ThemeIcon({ theme }) {
   if (theme === "light") {
     return (
@@ -31,13 +44,17 @@ function ThemeIcon({ theme }) {
 }
 
 export default function Navbar({ brandName, learnerName, theme, toggleTheme }) {
+  const navigate = useNavigate();
+  const { user, isAuthenticated, logout } = useAuth();
+  const resolvedLearnerName = user?.name ?? learnerName;
+
   return (
     <header className="page-navbar">
       {/* Brand area keeps the product identity visible on learner pages. */}
-      <div className="brand-lockup">
-        <span className="brand-chip">Learner Space</span>
-        <h1>{brandName}</h1>
-      </div>
+      <Link className="brand-lockup brand-wordmark-link" to={isAuthenticated ? "/my-courses" : "/auth/login"}>
+        <BrandLogoIcon />
+        <h1 className="brand-wordmark">Learnova</h1>
+      </Link>
 
       <div className="navbar-actions">
         {/* Theme toggle sits in the upper-right controls and flips the global page palette. */}
@@ -52,16 +69,40 @@ export default function Navbar({ brandName, learnerName, theme, toggleTheme }) {
           <span>{theme === "light" ? "Light" : "Dark"}</span>
         </button>
 
-        {/* This page only supports the logged-in learner state for now. */}
-        <div className="learner-badge" aria-label={`Signed in as ${learnerName}`}>
-          <div className="learner-copy">
-            <span className="eyebrow">Logged in</span>
-            <strong>{learnerName}</strong>
+        {isAuthenticated ? (
+          <div className="learner-badge" aria-label={`Signed in as ${resolvedLearnerName}`}>
+            <div className="learner-copy">
+              <span className="eyebrow">Logged in</span>
+              <strong>{resolvedLearnerName}</strong>
+            </div>
+            <div className="profile-avatar" aria-hidden="true">
+              {resolvedLearnerName.slice(0, 1)}
+            </div>
+            <button
+              type="button"
+              className="navbar-text-button"
+              onClick={() => {
+                logout();
+                navigate("/auth/login");
+              }}
+            >
+              Sign Out
+            </button>
           </div>
-          <div className="profile-avatar" aria-hidden="true">
-            {learnerName.slice(0, 1)}
-          </div>
-        </div>
+        ) : (
+          <Link className="learner-badge navbar-signin-link" to="/auth/login">
+            <div className="learner-copy">
+              <span className="eyebrow">Access</span>
+              <strong>Sign In</strong>
+            </div>
+            <div className="profile-avatar" aria-hidden="true">
+              <svg viewBox="0 0 24 24" className="inline-icon">
+                <circle cx="12" cy="8" r="4" fill="currentColor" />
+                <path d="M4 21c1.6-4.2 4.6-6.3 8-6.3S18.4 16.8 20 21" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+              </svg>
+            </div>
+          </Link>
+        )}
       </div>
     </header>
   );

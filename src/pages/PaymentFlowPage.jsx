@@ -13,7 +13,7 @@ export default function PaymentFlowPage({ theme, toggleTheme }) {
   return (
     <main className="course-page-shell">
       <Navbar
-        brandName="KaiCrypt"
+        brandName="Learnova"
         learnerName="Kardam"
         theme={theme}
         toggleTheme={toggleTheme}
