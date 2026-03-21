@@ -1,37 +1,109 @@
-# 🚀 Learnova — eLearning Platform
+# Learnova
 
-> From course creation to completion — a complete learning ecosystem.
+Learnova is an eLearning platform with two major sides:
+- Learner-facing website/app
+- Instructor/Admin backoffice
 
-## 📌 Overview
-Learnova is a full-stack eLearning platform where instructors can create and manage courses, and learners can enroll, track progress, attempt quizzes, and earn rewards.
+The current repo status is strongest on the **learner-side frontend**, with route-driven pages for:
+- authentication
+- My Courses dashboard
+- course detail overview
+- ratings and reviews
+- fullscreen lesson player
+- quiz flow
+- PDF.js document viewing
 
-## ✨ Features
+## Current Frontend Status
 
-### 👨‍🏫 Admin / Instructor
-- Create & manage courses
-- Add lessons (Video, Document, Image)
-- Build quizzes with multiple attempts
-- Track learner progress
-- Publish/unpublish courses
+Implemented learner flows:
+- Login / Signup
+- Role selection in auth UI
+- Google sign-in entry support
+- My Courses dashboard
+- Course Detail page
+- Ratings and Reviews page
+- Fullscreen lesson player
+- Separate document / video / quiz route states
+- Quiz intro, questions, reward flow
+- Points / badge profile panel
+- PDF.js document viewer with lazy loading, fullscreen, and keyboard shortcuts
 
-### 👨‍🎓 Learner
-- Browse and enroll in courses
-- Full-screen learning player
-- Attempt quizzes (one question at a time)
-- Earn points & badges
-- Add ratings & reviews
+## Current Frontend Architecture
 
-## 🏗️ Architecture
-- Feature-based modular architecture
-- Scalable and easy to maintain
+The frontend currently follows a **page/component-based layered React structure**:
 
-## 🛠️ Tech Stack
-- Frontend: React 
-- Backend: Node.js Express.js
-- Database: PostgreSQL 
+```plaintext
+src/
+├── components/
+├── context/
+├── data/
+├── pages/
+├── styles/
+├── utils/
+├── App.jsx
+└── main.jsx
+```
 
-## 🚀 Setup
+This is the current source of truth for frontend work.
+
+## Current Stack
+
+- Frontend: React + Vite
+- Routing: React Router
+- PDF Viewer: pdf.js (`pdfjs-dist`)
+- Backend structure: Python-oriented placeholder/backend folders exist, but the main live product work in this repo is frontend-first at the moment
+- Shared contracts: `shared/types/common_types.ts`
+
+## Key Frontend Routes
+
+- `/auth/login`
+- `/auth/signup`
+- `/auth/forgot-password`
+- `/my-courses`
+- `/courses/:courseId`
+- `/courses/:courseId/reviews`
+- `/courses/:courseId/payment`
+- `/courses/:courseId/learn/:contentId/document`
+- `/courses/:courseId/learn/:contentId/video`
+- `/courses/:courseId/learn/:contentId/quiz`
+- `/courses/:courseId/learn/:contentId/quiz/question/:questionIndex`
+- `/courses/:courseId/learn/:contentId/quiz/reward`
+
+## Local Setup
 
 ```bash
-git clone https://github.com/Kardam-Codes/learnova.git
-cd learnova
+npm install
+npm run dev
+```
+
+Build:
+
+```bash
+npm run build
+```
+
+## Environment
+
+Use `.env.example` as the reference. Current frontend env usage:
+
+```env
+VITE_GOOGLE_CLIENT_ID=
+```
+
+## Important Project Conventions
+
+- Use SVG icons only
+- No emoji-based UI icons
+- Add metadata headers in source files
+- Keep ownership clear: `KARDAM`, `YUG`, or `BOTH CAN ADD`
+- Keep new frontend pages inside the existing page/component structure
+
+## Documentation Map
+
+- [API.md](./API.md)
+- [ARCHITECTURE.md](./ARCHITECTURE.md)
+- [DB_SCHEMA.md](./DB_SCHEMA.md)
+- [DESIGN.md](./DESIGN.md)
+- [TASKS.md](./TASKS.md)
+- [WORKFLOW.md](./WORKFLOW.md)
+- [PAGE_CONSISTENCY.md](./PAGE_CONSISTENCY.md)
