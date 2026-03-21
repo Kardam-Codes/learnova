@@ -6,35 +6,42 @@
  */
 :root {
   color-scheme: light;
-  --bg: #f4efe6;
-  --panel: #fffdf8;
-  --panel-alt: #ece4d8;
-  --ink: #161616;
-  --line: #161616;
-  --yellow: #facc15;
-  --pink: #f472b6;
-  --cyan: #22d3ee;
+  --bg: #f9fafb;
+  --panel: #ffffff;
+  --panel-alt: #f3f4f6;
+  --ink: #111827;
+  --line: #e5e7eb;
+  --yellow: #fbbf24;
+  --pink: #7c3aed;
+  --cyan: #2563eb;
   --white: #ffffff;
-  --muted: #5d534b;
-  --page-foreground: #161616;
-  --glow-cyan: rgba(34, 211, 238, 0.16);
-  --glow-pink: rgba(244, 114, 182, 0.16);
-  --hard-shadow: 8px 8px 0 0 #000000;
-  --card-shadow: 10px 10px 0 0 #000000;
+  --muted: #6b7280;
+  --page-foreground: #111827;
+  --glow-cyan: rgba(37, 99, 235, 0.14);
+  --glow-pink: rgba(124, 58, 237, 0.12);
+  --hard-shadow: 0 10px 24px rgba(37, 99, 235, 0.12);
+  --card-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #0ea5e9;
+  --gradient-primary: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --bg: #080808;
-  --panel: #121416;
-  --panel-alt: #1d2125;
-  --ink: #f6efe4;
-  --line: #f6efe4;
-  --white: #101214;
-  --muted: #b8b0a4;
-  --page-foreground: #f6efe4;
-  --glow-cyan: rgba(34, 211, 238, 0.18);
-  --glow-pink: rgba(244, 114, 182, 0.18);
+  --bg: #0f172a;
+  --panel: #111827;
+  --panel-alt: #172033;
+  --ink: #f8fafc;
+  --line: #334155;
+  --white: #0f172a;
+  --muted: #94a3b8;
+  --page-foreground: #f8fafc;
+  --glow-cyan: rgba(37, 99, 235, 0.18);
+  --glow-pink: rgba(124, 58, 237, 0.16);
+  --hard-shadow: 0 16px 34px rgba(15, 23, 42, 0.42);
+  --card-shadow: 0 22px 46px rgba(2, 6, 23, 0.52);
 }
 
 /* Base reset and page canvas */
@@ -3847,4 +3854,343 @@ img {
   .options-payment-row {
     margin-left: 0;
   }
+}
+
+/* Learnova new theme overrides */
+body {
+  font-family: Inter, system-ui, sans-serif;
+  line-height: 1.5;
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(124, 58, 237, 0.12), transparent 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(249, 250, 251, 1));
+}
+
+:root[data-theme="dark"] body,
+[data-theme="dark"] body {
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.18), transparent 24%),
+    radial-gradient(circle at top right, rgba(124, 58, 237, 0.16), transparent 28%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.98), rgba(15, 23, 42, 1));
+}
+
+.page-navbar,
+.course-page-card,
+.player-sidebar,
+.player-content,
+.publish-card,
+.course-image-card,
+.option-box,
+.report-summary-card,
+.reporting-table-shell,
+.quiz-builder-sidebar,
+.quiz-builder-panel,
+.instructor-panel,
+.auth-card,
+.modal-card,
+.instructor-course-item,
+.progress-panel,
+.content-section,
+.placeholder-panel,
+.course-summary,
+.course-cover-panel {
+  border-width: 1px;
+  border-color: var(--line);
+  border-radius: 18px;
+  box-shadow: var(--card-shadow);
+}
+
+.page-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  border: 0;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.8);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+:root[data-theme="dark"] .page-navbar {
+  border-bottom-color: rgba(51, 65, 85, 0.8);
+  background: rgba(15, 23, 42, 0.78);
+  box-shadow: 0 10px 28px rgba(2, 6, 23, 0.34);
+}
+
+.course-page-card {
+  padding: 28px 28px 24px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.brand-wordmark,
+.auth-logo-wordmark,
+.brand-lockup h1 {
+  font-family: Inter, system-ui, sans-serif;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+
+.brand-wordmark {
+  font-size: clamp(1.45rem, 2.2vw, 1.85rem);
+}
+
+.brand-logo-icon {
+  color: var(--cyan);
+}
+
+.brand-chip,
+.sticker,
+.eyebrow,
+.course-item-tag,
+.reporting-section-chip {
+  border: 0;
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: rgba(37, 99, 235, 0.12);
+  color: var(--cyan);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.sticker {
+  background: rgba(124, 58, 237, 0.12);
+  color: var(--pink);
+  transform: none;
+}
+
+.theme-toggle,
+.navbar-text-button,
+.navbar-signin-link,
+.learner-badge,
+.catalog-action-button,
+.auth-primary-button,
+.google-signin-fallback-button,
+.password-toggle,
+.view-toggle-button,
+.quiz-sidebar-button,
+.report-summary-card {
+  border-width: 1px;
+  border-color: var(--line);
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.theme-toggle,
+.navbar-text-button,
+.navbar-signin-link,
+.learner-badge,
+.instructor-ghost-button,
+.google-signin-fallback-button,
+.view-toggle-button {
+  background: rgba(255, 255, 255, 0.72);
+}
+
+:root[data-theme="dark"] .theme-toggle,
+:root[data-theme="dark"] .navbar-text-button,
+:root[data-theme="dark"] .navbar-signin-link,
+:root[data-theme="dark"] .learner-badge,
+:root[data-theme="dark"] .instructor-ghost-button,
+:root[data-theme="dark"] .google-signin-fallback-button,
+:root[data-theme="dark"] .view-toggle-button {
+  background: rgba(17, 24, 39, 0.76);
+}
+
+.catalog-action-button,
+.auth-primary-button,
+.instructor-solid-button,
+.instructor-cta-button,
+.quiz-sidebar-button,
+.instructor-floating-add {
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  color: #ffffff;
+}
+
+.catalog-action-button,
+.auth-primary-button,
+.navbar-text-button,
+.theme-toggle,
+.row-menu-button,
+.publish-row,
+.report-summary-card,
+.instructor-course-item,
+.course-tab,
+.content-row,
+.quiz-list-item {
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.22s ease,
+    border-color 0.22s ease,
+    background-color 0.22s ease;
+}
+
+.catalog-action-button:hover,
+.auth-primary-button:hover,
+.navbar-text-button:hover,
+.theme-toggle:hover,
+.course-tab:hover,
+.row-menu-button:hover,
+.report-summary-card:hover,
+.quiz-list-item:hover,
+.content-row:hover,
+.instructor-course-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 28px rgba(37, 99, 235, 0.12);
+}
+
+.profile-avatar,
+.publish-switch.is-on span,
+.progress-fill,
+.course-progress-bar-fill {
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  color: #ffffff;
+}
+
+.badge-row,
+.instructor-course-item,
+.report-summary-card,
+.reporting-table-row,
+.instructor-table-row,
+.content-row,
+.review-card,
+.profile-panel,
+.course-summary,
+.course-cover-panel,
+.progress-panel,
+.player-sidebar,
+.player-content,
+.auth-card,
+.modal-card,
+.publish-card,
+.course-image-card,
+.option-box,
+.quiz-builder-sidebar,
+.quiz-builder-panel,
+.instructor-panel {
+  background: rgba(255, 255, 255, 0.86);
+}
+
+:root[data-theme="dark"] .badge-row,
+:root[data-theme="dark"] .instructor-course-item,
+:root[data-theme="dark"] .report-summary-card,
+:root[data-theme="dark"] .reporting-table-row,
+:root[data-theme="dark"] .instructor-table-row,
+:root[data-theme="dark"] .content-row,
+:root[data-theme="dark"] .review-card,
+:root[data-theme="dark"] .profile-panel,
+:root[data-theme="dark"] .course-summary,
+:root[data-theme="dark"] .course-cover-panel,
+:root[data-theme="dark"] .progress-panel,
+:root[data-theme="dark"] .player-sidebar,
+:root[data-theme="dark"] .player-content,
+:root[data-theme="dark"] .auth-card,
+:root[data-theme="dark"] .modal-card,
+:root[data-theme="dark"] .publish-card,
+:root[data-theme="dark"] .course-image-card,
+:root[data-theme="dark"] .option-box,
+:root[data-theme="dark"] .quiz-builder-sidebar,
+:root[data-theme="dark"] .quiz-builder-panel,
+:root[data-theme="dark"] .instructor-panel {
+  background: rgba(17, 24, 39, 0.84);
+}
+
+.auth-layout {
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.18), transparent 24%),
+    radial-gradient(circle at top right, rgba(124, 58, 237, 0.18), transparent 30%),
+    linear-gradient(135deg, #0f172a 0%, #111827 100%);
+}
+
+.auth-card,
+.modal-card {
+  color: #f8fafc;
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+.auth-card h1,
+.modal-header h2,
+.course-item-title-link h2,
+.content-editor-header h1,
+.player-content h1,
+.course-summary-copy h2,
+.reviews-header h2 {
+  font-family: Inter, system-ui, sans-serif;
+  letter-spacing: -0.03em;
+}
+
+.auth-field input,
+.auth-field select,
+.review-input,
+.password-toggle,
+.instructor-field input,
+.instructor-field select,
+.editor-line-field input,
+.editor-line-field select,
+.editor-description-textarea,
+.search-shell input {
+  border-width: 1px;
+  border-color: var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--ink);
+  box-shadow: none;
+}
+
+:root[data-theme="dark"] .auth-field input,
+:root[data-theme="dark"] .auth-field select,
+:root[data-theme="dark"] .review-input,
+:root[data-theme="dark"] .password-toggle,
+:root[data-theme="dark"] .instructor-field input,
+:root[data-theme="dark"] .instructor-field select,
+:root[data-theme="dark"] .editor-line-field input,
+:root[data-theme="dark"] .editor-line-field select,
+:root[data-theme="dark"] .editor-description-textarea,
+:root[data-theme="dark"] .search-shell input {
+  background: rgba(15, 23, 42, 0.7);
+  color: var(--ink);
+}
+
+.auth-field input:focus,
+.auth-field select:focus,
+.review-input:focus,
+.instructor-field input:focus,
+.instructor-field select:focus,
+.editor-line-field input:focus,
+.editor-line-field select:focus,
+.editor-description-textarea:focus,
+.search-shell input:focus {
+  outline: none;
+  border-color: rgba(37, 99, 235, 0.65);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.14);
+}
+
+.course-tab.is-active,
+.instructor-nav-link.is-active,
+.quiz-list-item.is-active,
+.report-summary-card.is-active {
+  background: rgba(37, 99, 235, 0.14);
+  border-color: rgba(37, 99, 235, 0.34);
+  color: var(--cyan);
+}
+
+.content-row.is-current,
+.player-outline-item.is-active,
+.badge-row.is-current {
+  background: rgba(124, 58, 237, 0.12);
+  border-color: rgba(124, 58, 237, 0.3);
+}
+
+.instructor-publish-ribbon,
+.instructor-draft-badge {
+  border-width: 1px;
+  border-radius: 999px;
+  transform: none;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.instructor-publish-ribbon {
+  color: #22c55e;
 }

@@ -5,6 +5,7 @@
  * What it is: A reusable instructor header with brand, primary navigation, and utility actions.
  */
 import { NavLink } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const navItems = [
   { label: "Courses", to: "/instructor/courses" },
@@ -13,11 +14,13 @@ const navItems = [
 ];
 
 export default function InstructorNavbar() {
+  const { user } = useAuth();
+  const displayName = user?.name ?? "Instructor";
+
   return (
     <header className="page-navbar instructor-navbar">
-      <div className="brand-lockup">
-        <span className="brand-chip">Instructor Space</span>
-        <h1>Learnova</h1>
+      <div className="brand-lockup brand-wordmark-link">
+        <h1 className="brand-wordmark">Learnova</h1>
       </div>
 
       <nav className="instructor-nav-links" aria-label="Instructor navigation">
@@ -34,13 +37,13 @@ export default function InstructorNavbar() {
         ))}
       </nav>
 
-      <div className="learner-badge instructor-user-badge" aria-label="Signed in as Yug">
+      <div className="learner-badge instructor-user-badge" aria-label={`Signed in as ${displayName}`}>
         <div className="learner-copy">
           <span className="eyebrow">Signed in</span>
-          <strong>Yug</strong>
+          <strong>{displayName}</strong>
         </div>
         <div className="profile-avatar" aria-hidden="true">
-          Y
+          {displayName.slice(0, 1)}
         </div>
       </div>
     </header>
