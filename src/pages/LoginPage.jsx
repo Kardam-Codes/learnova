@@ -25,7 +25,7 @@ const ROLE_OPTIONS = [
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, loginWithGoogle, isAuthenticated, user, defaultRoute } = useAuth();
+  const { login, loginWithGoogle, isAuthenticated, defaultRoute } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("learner");
@@ -53,15 +53,15 @@ export default function LoginPage() {
     navigate(getDefaultRouteForRole(role));
   };
 
-  const handleGoogleSuccess = (profile) => {
-    const result = loginWithGoogle(profile, role);
+  const handleGoogleSuccess = async (credential) => {
+    const result = await loginWithGoogle(credential, role);
 
     if (!result.ok) {
       setError(result.error);
       return;
     }
 
-    navigate(getDefaultRouteForRole(user?.role ?? role));
+    navigate(getDefaultRouteForRole(role));
   };
 
   return (

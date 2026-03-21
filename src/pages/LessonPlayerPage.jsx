@@ -65,6 +65,18 @@ function SidebarStatusIcon({ status }) {
 }
 
 function LearningSidebar({ course, currentContentId, isOpen, onToggle }) {
+  const getSidebarLockReason = (item) => {
+    if (!course.isEnrolled) {
+      return "Enroll to unlock";
+    }
+
+    if (item.mode === LEARNING_CONTENT_MODE.QUIZ) {
+      return "Finish earlier lessons first";
+    }
+
+    return "Locked";
+  };
+
   return (
     <aside className={`learning-sidebar ${isOpen ? "" : "is-collapsed"}`}>
       <div className="learning-sidebar-top">
@@ -118,7 +130,7 @@ function LearningSidebar({ course, currentContentId, isOpen, onToggle }) {
                         ))}
                       </div>
                     ) : null}
-                    <span className="learning-lock-reason">{item.lockReason}</span>
+                    <span className="learning-lock-reason">{getSidebarLockReason(item)}</span>
                   </div>
                   <SidebarStatusIcon status={item.status} />
                 </div>
@@ -340,13 +352,6 @@ function LearningMainContent({
           {proceedLabel}
         </button>
       </section>
-      <div className="learning-footer-actions">
-        <LearningFooterAction
-          label={isFinalQuestion ? "Complete this course" : "Next Content"}
-          onClick={onAdvanceContent}
-          disabled
-        />
-      </div>
     </>
   );
 }

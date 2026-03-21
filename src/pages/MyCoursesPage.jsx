@@ -93,15 +93,7 @@ export default function MyCoursesPage({ theme, toggleTheme }) {
       return true;
     }
 
-    const searchTarget = [
-      course.title,
-      course.shortDescription,
-      ...course.tags,
-    ]
-      .join(" ")
-      .toLowerCase();
-
-    return searchTarget.includes(normalizedQuery);
+    return course.title.toLowerCase().includes(normalizedQuery);
   };
 
   const filteredEnrolledCourses = catalogData.enrolledCourses.filter(matchesQuery);
@@ -158,7 +150,7 @@ export default function MyCoursesPage({ theme, toggleTheme }) {
           <SearchBar
             value={query}
             onChange={setQuery}
-            placeholder="Search all courses"
+            placeholder="Search course name"
           />
         </div>
 
@@ -174,7 +166,7 @@ export default function MyCoursesPage({ theme, toggleTheme }) {
                 <section className="catalog-section">
                   <div className="catalog-section-header">
                     <span className="eyebrow">Learning now</span>
-                    <h2>My Courses</h2>
+                    <h2>Enrolled Courses</h2>
                   </div>
                   {filteredEnrolledCourses.length ? (
                     <CourseGrid courses={filteredEnrolledCourses} onEnrollCourse={handleEnrollCourse} />

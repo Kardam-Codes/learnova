@@ -53,6 +53,27 @@ export async function registerRequest(payload) {
   return parseJsonResponse(response);
 }
 
+export async function googleLoginRequest(payload) {
+  const response = await fetch(`${API_BASE_URL}/auth/google`, {
+    method: "POST",
+    headers: buildHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  return parseJsonResponse(response);
+}
+
+export async function checkEmailAvailabilityRequest(email) {
+  const response = await fetch(
+    `${API_BASE_URL}/auth/check-email?email=${encodeURIComponent(email)}`,
+    {
+      headers: buildHeaders(),
+    },
+  );
+
+  return parseJsonResponse(response);
+}
+
 export async function meRequest(token) {
   const response = await fetch(`${API_BASE_URL}/auth/me`, {
     headers: buildHeaders(token),

@@ -5159,6 +5159,7 @@ body {
   --glow-cyan: transparent;
   --glow-pink: transparent;
   --gradient-primary: none;
+  --accent: #7c3aed;
 }
 
 :root[data-theme="dark"] {

@@ -63,6 +63,30 @@ function ReviewStars({ rating }) {
   );
 }
 
+function RatingPicker({ rating, onChange, disabled }) {
+  return (
+    <div className={`review-stars review-rating-picker ${disabled ? "is-disabled" : ""}`} aria-label="Select a rating">
+      {Array.from({ length: 5 }, (_, index) => {
+        const value = index + 1;
+        const isFilled = value <= rating;
+
+        return (
+          <button
+            key={value}
+            type="button"
+            className={`review-star-button ${isFilled ? "is-filled" : ""}`}
+            onClick={() => onChange(value)}
+            disabled={disabled}
+            aria-label={`Rate ${value} star${value > 1 ? "s" : ""}`}
+          >
+            <StarIcon filled={isFilled} />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function CourseReviewsPage({ theme, toggleTheme }) {
   const { courseId } = useParams();
   const { token } = useAuth();
@@ -191,14 +215,18 @@ export default function CourseReviewsPage({ theme, toggleTheme }) {
               <strong>{course.reviews.averageRating.toFixed(1)}</strong>
               <ReviewStars rating={course.reviews.averageRating} />
             </div>
-            <button
-              type="button"
-              className="catalog-action-button is-buy reviews-add-button"
-              onClick={handleReviewSubmit}
-              disabled={isSavingReview || !reviewDraft.trim() || !course.isEnrolled}
-            >
-              {isSavingReview ? "Saving..." : "Add Review"}
-            </button>
+            {course.isEnrolled ? (
+              <button
+                type="button"
+                className="catalog-action-button is-buy reviews-add-button"
+                onClick={handleReviewSubmit}
+                disabled={isSavingReview || !reviewDraft.trim()}
+              >
+                {isSavingReview ? "Saving..." : "Add Review"}
+              </button>
+            ) : (
+              <span className="secondary-status-text">View only until enrolled</span>
+            )}
           </div>
 
           {!course.isEnrolled ? (
@@ -221,17 +249,11 @@ export default function CourseReviewsPage({ theme, toggleTheme }) {
             </div>
             <label className="review-rating-field">
               <span>Rating</span>
-              <select
-                className="review-rating-select"
-                value={reviewRating}
-                onChange={(event) => setReviewRating(Number(event.target.value))}
-              >
-                {[5, 4, 3, 2, 1].map((ratingOption) => (
-                  <option key={ratingOption} value={ratingOption}>
-                    {ratingOption} Stars
-                  </option>
-                ))}
-              </select>
+              <RatingPicker
+                rating={reviewRating}
+                onChange={setReviewRating}
+                disabled={!course.isEnrolled || isSavingReview}
+              />
             </label>
             <textarea
               className="review-input"

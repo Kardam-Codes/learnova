@@ -8,11 +8,13 @@
 :root {
   --surface-shadow: 0 18px 34px rgba(16, 32, 43, 0.06);
   --surface-shadow-soft: 0 10px 18px rgba(16, 32, 43, 0.04);
+  --surface-shadow-hover: 0 22px 42px rgba(16, 32, 43, 0.1);
 }
 
 :root[data-theme="dark"] {
   --surface-shadow: 0 18px 34px rgba(0, 0, 0, 0.24);
   --surface-shadow-soft: 0 10px 18px rgba(0, 0, 0, 0.16);
+  --surface-shadow-hover: 0 22px 42px rgba(0, 0, 0, 0.28);
 }
 
 .page-navbar,
@@ -92,6 +94,13 @@
 .auth-primary-button {
   border-width: 1px !important;
   box-shadow: var(--surface-shadow-soft) !important;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    opacity 180ms ease;
 }
 
 .content-row:hover,
@@ -111,7 +120,30 @@
 .learning-menu-button:hover,
 .quiz-list-item:hover,
 .course-tab:hover {
-  transform: none !important;
+  transform: translateY(-1px) !important;
+  box-shadow: var(--surface-shadow-hover) !important;
+}
+
+input,
+select,
+textarea,
+.content-row,
+.learning-outline-item,
+.review-card,
+.review-entry-card,
+.reviews-summary-card,
+.course-page-card,
+.profile-panel,
+.status-banner,
+.empty-state,
+.loading-block {
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    opacity 180ms ease;
 }
 
 .brand-wordmark,
@@ -165,19 +197,85 @@
 .catalog-sections {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 22px;
 }
 
 .catalog-section {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--panel) 82%, var(--panel-muted));
 }
 
 .catalog-section-header {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.catalog-section-header h2 {
+  margin: 0;
+}
+
+.catalog-grid {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important;
+  gap: 18px !important;
+}
+
+.course-card-topline .sticker {
+  background: color-mix(in srgb, var(--primary) 12%, var(--panel)) !important;
+  color: var(--primary-strong) !important;
+  border-color: color-mix(in srgb, var(--primary) 34%, var(--line)) !important;
+  padding: 8px 14px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.01em;
+}
+
+.course-card {
+  min-height: 0 !important;
+  border-radius: 18px !important;
+}
+
+.course-card-cover {
+  min-height: 168px !important;
+  max-height: 168px !important;
+}
+
+.course-card-cover img {
+  min-height: 168px !important;
+  max-height: 168px !important;
+  object-fit: cover;
+}
+
+.course-card-body {
+  padding: 18px !important;
+  gap: 16px !important;
+}
+
+.course-card-copy {
+  gap: 12px !important;
+}
+
+.course-card-title-link h3 {
+  line-height: 1.2;
+}
+
+.course-card p {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.course-card-footer {
+  gap: 10px !important;
+}
+
+.my-courses-header {
+  align-items: end;
 }
 
 .course-summary-action {
@@ -216,8 +314,10 @@
 
 .content-row.is-locked,
 .learning-outline-item.is-locked {
-  opacity: 0.82;
+  opacity: 0.95;
   cursor: not-allowed;
+  border-color: color-mix(in srgb, var(--danger) 30%, var(--line)) !important;
+  background: color-mix(in srgb, var(--danger) 7%, var(--panel)) !important;
 }
 
 .content-lock-reason,
@@ -225,6 +325,10 @@
   color: var(--muted);
   font-size: 16px;
   line-height: 1.45;
+}
+
+.content-lock-reason {
+  color: color-mix(in srgb, var(--danger) 65%, var(--ink));
 }
 
 .learning-footer-button {
@@ -241,6 +345,122 @@
 .learning-footer-button:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.field-helper-text,
+.field-error-text {
+  display: block;
+  margin-top: 6px;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+.field-helper-text {
+  color: var(--muted);
+}
+
+.field-error-text {
+  color: var(--danger);
+}
+
+.secondary-status-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 82%, var(--panel-muted));
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.review-rating-picker {
+  gap: 10px;
+}
+
+.review-star-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.review-star-button:hover:not(:disabled),
+.review-star-button:focus-visible:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: var(--primary);
+  color: var(--warning);
+  box-shadow: var(--surface-shadow-soft);
+}
+
+.review-star-button.is-filled {
+  color: var(--warning);
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--line));
+  background: color-mix(in srgb, var(--warning) 10%, var(--panel));
+}
+
+.review-rating-picker.is-disabled {
+  opacity: 0.6;
+}
+
+.course-lock-panel,
+.payment-panel,
+.catalog-section,
+.review-card:hover,
+.review-entry-card:hover,
+.reviews-summary-card:hover,
+.content-row:hover,
+.learning-outline-item:hover,
+.profile-panel:hover {
+  box-shadow: var(--surface-shadow-hover);
+}
+
+.course-toolbar {
+  padding: 14px 0 6px;
+}
+
+.content-row {
+  border-left-width: 4px !important;
+  border-left-color: transparent !important;
+}
+
+.content-row.is-current {
+  border-left-color: var(--primary) !important;
+}
+
+.content-row.is-locked {
+  border-left-color: var(--danger) !important;
+}
+
+.learning-outline-item.is-active {
+  box-shadow: var(--surface-shadow-soft) !important;
+}
+
+.course-tab,
+.back-link,
+.navbar-text-button,
+.navbar-signin-link {
+  background: color-mix(in srgb, var(--panel) 84%, var(--panel-muted));
+}
+
+.course-tab.is-active,
+.catalog-action-button.is-start,
+.catalog-action-button.is-enroll,
+.auth-primary-button {
+  box-shadow: var(--surface-shadow-soft) !important;
 }
 
 .reporting-layout-grid {

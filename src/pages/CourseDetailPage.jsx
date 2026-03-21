@@ -13,6 +13,7 @@ import ContentSearch from "../components/ContentSearch";
 import ContentList from "../components/ContentList";
 import StatusBanner from "../components/StatusBanner";
 import LoadingBlock from "../components/LoadingBlock";
+import EmptyState from "../components/EmptyState";
 import { useAuth } from "../context/AuthContext";
 import { enrollCourseRequest, fetchCourseDetailRequest } from "../utils/apiClient";
 
@@ -146,6 +147,16 @@ export default function CourseDetailPage({ theme, toggleTheme }) {
           <LoadingBlock
             title="Loading course details"
             description="Preparing the course overview, progress, and content list."
+          />
+        ) : loadError && !course.id ? (
+          <EmptyState
+            title="Course details could not be loaded"
+            description="We could not load this course right now. Return to My Courses and try again."
+            action={
+              <Link className="catalog-action-button is-start" to="/my-courses">
+                Back to My Courses
+              </Link>
+            }
           />
         ) : (
           <>

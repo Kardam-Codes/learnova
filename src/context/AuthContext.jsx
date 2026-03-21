@@ -5,7 +5,13 @@
  * What it is: A backend-connected auth context that persists the active session in localStorage.
  */
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { loginRequest, meRequest, registerRequest } from "../utils/apiClient";
+import {
+  checkEmailAvailabilityRequest,
+  googleLoginRequest,
+  loginRequest,
+  meRequest,
+  registerRequest,
+} from "../utils/apiClient";
 
 const AuthContext = createContext(null);
 
@@ -136,24 +142,39 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const loginWithGoogle = (profile, selectedRole) => {
+  const loginWithGoogle = async (credential, selectedRole) => {
     const normalizedRole = normalizeSelectedRole(selectedRole);
 
-    // Google auth is still frontend-only until the backend verification flow is added.
-    persistSession({
-      user: {
-        id: `google-${Date.now()}`,
-        name: profile.name,
-        email: profile.email,
+    try {
+      const response = await googleLoginRequest({
+        credential,
         role: normalizedRole,
-        provider: "google",
-        is_active: true,
-      },
-      token: btoa(`${profile.email}:${Date.now()}`),
-      isAuthenticated: true,
-    });
+      });
 
-    return { ok: true };
+      persistSession({
+        user: response.user,
+        token: response.access_token,
+        isAuthenticated: true,
+      });
+
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: error.message };
+    }
+  };
+
+  const checkEmailAvailability = async (email) => {
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail) {
+      return { ok: false, error: "Email is required." };
+    }
+
+    try {
+      const response = await checkEmailAvailabilityRequest(trimmedEmail);
+      return { ok: true, ...response };
+    } catch (error) {
+      return { ok: false, error: error.message };
+    }
   };
 
   const logout = () => {
@@ -173,6 +194,7 @@ export function AuthProvider({ children }) {
       login,
       signup,
       loginWithGoogle,
+      checkEmailAvailability,
       logout,
     };
   }, [isAuthReady, session]);

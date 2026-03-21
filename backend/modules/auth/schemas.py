@@ -65,6 +65,17 @@ class LoginRequest(BaseModel):
     role: AllowedSignupRole = "learner"
 
 
+class GoogleAuthRequest(BaseModel):
+    credential: str = Field(min_length=10)
+    role: AllowedSignupRole = "learner"
+
+
+class EmailAvailabilityResponse(BaseModel):
+    email: EmailStr
+    isAvailable: bool
+    message: str
+
+
 class TokenPayload(BaseModel):
     sub: str
     email: EmailStr

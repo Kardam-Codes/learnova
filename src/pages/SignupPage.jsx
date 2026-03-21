@@ -23,7 +23,7 @@ const ROLE_OPTIONS = [
 
 export default function SignupPage() {
   const navigate = useNavigate();
-  const { signup, loginWithGoogle, isAuthenticated, defaultRoute } = useAuth();
+  const { signup, loginWithGoogle, checkEmailAvailability, isAuthenticated, defaultRoute } = useAuth();
   const [formValues, setFormValues] = useState({
     name: "",
     email: "",
@@ -32,6 +32,11 @@ export default function SignupPage() {
     role: "learner",
   });
   const [error, setError] = useState("");
+  const [emailStatus, setEmailStatus] = useState({
+    message: "",
+    isAvailable: null,
+    isChecking: false,
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (isAuthenticated) {
@@ -40,10 +45,96 @@ export default function SignupPage() {
 
   const updateField = (fieldName, value) => {
     setFormValues((current) => ({ ...current, [fieldName]: value }));
+    if (fieldName === "email") {
+      setEmailStatus({
+        message: "",
+        isAvailable: null,
+        isChecking: false,
+      });
+    }
+  };
+
+  const passwordChecks = {
+    hasMinLength: formValues.password.length >= 8,
+    hasUpper: /[A-Z]/.test(formValues.password),
+    hasLower: /[a-z]/.test(formValues.password),
+    hasSpecial: /[^A-Za-z0-9]/.test(formValues.password),
+    matches: formValues.password && formValues.password === formValues.confirmPassword,
+  };
+
+  const passwordGuidance = [
+    `${passwordChecks.hasMinLength ? "✓" : "•"} 8+ characters`,
+    `${passwordChecks.hasUpper ? "✓" : "•"} one uppercase letter`,
+    `${passwordChecks.hasLower ? "✓" : "•"} one lowercase letter`,
+    `${passwordChecks.hasSpecial ? "✓" : "•"} one special character`,
+  ].join(" | ");
+
+  const confirmGuidance =
+    formValues.confirmPassword && !passwordChecks.matches
+      ? "Passwords do not match yet."
+      : formValues.confirmPassword && passwordChecks.matches
+        ? "Passwords match."
+        : "";
+
+  const handleEmailBlur = async () => {
+    if (!formValues.email.trim()) {
+      return;
+    }
+
+    setEmailStatus({
+      message: "Checking email availability...",
+      isAvailable: null,
+      isChecking: true,
+    });
+    const result = await checkEmailAvailability(formValues.email);
+    if (!result.ok) {
+      setEmailStatus({
+        message: result.error,
+        isAvailable: null,
+        isChecking: false,
+      });
+      return;
+    }
+
+    setEmailStatus({
+      message: result.message,
+      isAvailable: result.isAvailable,
+      isChecking: false,
+    });
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    let currentEmailStatus = emailStatus;
+    if (emailStatus.isAvailable === null && formValues.email.trim()) {
+      setEmailStatus({
+        message: "Checking email availability...",
+        isAvailable: null,
+        isChecking: true,
+      });
+      const availabilityResult = await checkEmailAvailability(formValues.email);
+      if (!availabilityResult.ok) {
+        setEmailStatus({
+          message: availabilityResult.error,
+          isAvailable: null,
+          isChecking: false,
+        });
+        setError(availabilityResult.error);
+        return;
+      }
+      currentEmailStatus = {
+        message: availabilityResult.message,
+        isAvailable: availabilityResult.isAvailable,
+        isChecking: false,
+      };
+      setEmailStatus(currentEmailStatus);
+    }
+
+    if (currentEmailStatus.isAvailable === false) {
+      setError("This email already has an account. Try logging in instead.");
+      return;
+    }
     setIsSubmitting(true);
     const result = await signup(formValues);
     setIsSubmitting(false);
@@ -57,8 +148,8 @@ export default function SignupPage() {
     navigate("/auth/login");
   };
 
-  const handleGoogleSuccess = (profile) => {
-    const result = loginWithGoogle(profile, formValues.role);
+  const handleGoogleSuccess = async (credential) => {
+    const result = await loginWithGoogle(credential, formValues.role);
 
     if (!result.ok) {
       setError(result.error);
@@ -96,7 +187,10 @@ export default function SignupPage() {
             type="email"
             value={formValues.email}
             onChange={(value) => updateField("email", value)}
+            onBlur={handleEmailBlur}
             placeholder="you@example.com"
+            helperText={emailStatus.isAvailable === true || emailStatus.isChecking ? emailStatus.message : ""}
+            errorText={emailStatus.isAvailable === false ? emailStatus.message : ""}
           />
           <SelectField
             id="signup-role"
@@ -111,6 +205,7 @@ export default function SignupPage() {
             value={formValues.password}
             onChange={(value) => updateField("password", value)}
             placeholder="Create a strong password"
+            helperText={passwordGuidance}
           />
           <PasswordField
             id="signup-confirm-password"
@@ -118,6 +213,8 @@ export default function SignupPage() {
             value={formValues.confirmPassword}
             onChange={(value) => updateField("confirmPassword", value)}
             placeholder="Re-enter your password"
+            helperText={confirmGuidance}
+            errorText={formValues.confirmPassword && !passwordChecks.matches ? "Passwords do not match." : ""}
           />
           <button type="submit" className="auth-primary-button" disabled={isSubmitting}>
             {isSubmitting ? "Signing Up..." : "Sign Up"}
