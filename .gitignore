@@ -1,0 +1,27 @@
+# File: .gitignore
+# Owner: BOTH CAN ADD
+# Purpose: Keep generated files, dependency folders, and local machine clutter out of git.
+# What it is: Repository ignore rules for the current React/Vite learner frontend setup.
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.vite/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment files
+.env
+.env.*
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
