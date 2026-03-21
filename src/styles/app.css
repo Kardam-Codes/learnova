@@ -5,19 +5,36 @@
  * What it is: Global stylesheet for the course overview page, reviews placeholder, and player placeholder.
  */
 :root {
+  color-scheme: light;
+  --bg: #f4efe6;
+  --panel: #fffdf8;
+  --panel-alt: #ece4d8;
+  --ink: #161616;
+  --line: #161616;
+  --yellow: #facc15;
+  --pink: #f472b6;
+  --cyan: #22d3ee;
+  --white: #ffffff;
+  --muted: #5d534b;
+  --page-foreground: #161616;
+  --glow-cyan: rgba(34, 211, 238, 0.16);
+  --glow-pink: rgba(244, 114, 182, 0.16);
+  --hard-shadow: 8px 8px 0 0 #000000;
+  --card-shadow: 10px 10px 0 0 #000000;
+}
+
+:root[data-theme="dark"] {
   color-scheme: dark;
   --bg: #080808;
   --panel: #121416;
   --panel-alt: #1d2125;
   --ink: #f6efe4;
   --line: #f6efe4;
-  --yellow: #facc15;
-  --pink: #f472b6;
-  --cyan: #22d3ee;
   --white: #101214;
   --muted: #b8b0a4;
-  --hard-shadow: 8px 8px 0 0 #000000;
-  --card-shadow: 10px 10px 0 0 #000000;
+  --page-foreground: #f6efe4;
+  --glow-cyan: rgba(34, 211, 238, 0.18);
+  --glow-pink: rgba(244, 114, 182, 0.18);
 }
 
 /* Base reset and page canvas */
@@ -35,10 +52,10 @@ body {
   margin: 0;
   font-family: Inter, "Segoe UI", sans-serif;
   background:
-    radial-gradient(circle at top left, rgba(34, 211, 238, 0.18), transparent 22%),
-    radial-gradient(circle at top right, rgba(244, 114, 182, 0.18), transparent 28%),
+    radial-gradient(circle at top left, var(--glow-cyan), transparent 22%),
+    radial-gradient(circle at top right, var(--glow-pink), transparent 28%),
     var(--bg);
-  color: var(--ink);
+  color: var(--page-foreground);
 }
 
 a {
@@ -73,7 +90,7 @@ img {
   gap: 20px;
   max-width: 1280px;
   margin: 0 auto 20px;
-  color: var(--white);
+  color: var(--page-foreground);
 }
 
 .brand-lockup h1,
@@ -116,6 +133,31 @@ img {
   color: var(--bg);
   transform: rotate(-2deg);
   width: fit-content;
+}
+
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 4px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  padding: 10px 14px;
+  box-shadow: var(--hard-shadow);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.theme-icon {
+  width: 20px;
+  height: 20px;
 }
 
 .learner-badge {
@@ -332,6 +374,10 @@ img {
   outline: none;
 }
 
+.content-search input::placeholder {
+  color: var(--muted);
+}
+
 .content-search input:focus {
   background: var(--yellow);
   color: var(--bg);
@@ -343,6 +389,12 @@ img {
   right: 16px;
   font-size: 1.2rem;
   font-weight: 900;
+}
+
+.inline-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
 }
 
 .content-section {
@@ -502,6 +554,118 @@ img {
   gap: 20px;
 }
 
+.reviews-page-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.reviews-content {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.reviews-summary-card,
+.review-entry-card,
+.review-card {
+  border: 4px solid var(--line);
+  background: var(--white);
+  padding: 20px;
+}
+
+.reviews-summary-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.reviews-score-block {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.reviews-score-block strong {
+  font-family: Manrope, "Segoe UI", sans-serif;
+  font-size: 3rem;
+  font-weight: 800;
+}
+
+.review-stars {
+  display: flex;
+  gap: 6px;
+}
+
+.review-star {
+  width: 24px;
+  height: 24px;
+  color: transparent;
+  stroke: var(--line);
+  stroke-width: 1.4;
+}
+
+.review-star.is-filled {
+  color: var(--yellow);
+  stroke: var(--line);
+}
+
+.review-entry-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.review-avatar {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel-alt);
+}
+
+.review-avatar-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.review-input {
+  width: 100%;
+  min-height: 88px;
+  border: 4px solid #d68516;
+  background: var(--panel);
+  color: var(--ink);
+  padding: 16px;
+  font: inherit;
+  resize: vertical;
+}
+
+.review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.review-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.review-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.reviews-add-button {
+  min-width: auto;
+}
+
 .back-link {
   display: inline-flex;
   align-items: center;
@@ -564,6 +728,339 @@ img {
   gap: 18px;
   justify-content: center;
   background: var(--panel);
+}
+
+/* Route-driven learning shell */
+.learning-page-shell {
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.learning-player-frame {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  min-height: calc(100vh - 40px);
+  border: 4px solid var(--line);
+  background: var(--bg);
+}
+
+.learning-sidebar {
+  border-right: 4px solid var(--line);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.learning-sidebar-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.learning-back-button,
+.learning-menu-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 4px solid var(--line);
+  background: var(--pink);
+  color: var(--bg);
+  padding: 8px 12px;
+  box-shadow: var(--hard-shadow);
+  font-weight: 900;
+}
+
+.learning-menu-button {
+  background: var(--panel);
+  color: var(--ink);
+  padding: 8px;
+}
+
+.learning-course-card {
+  border: 4px solid var(--line);
+  border-radius: 20px;
+  background: var(--panel);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.learning-course-card h2 {
+  margin: 0;
+  font-family: Manrope, "Segoe UI", sans-serif;
+  font-size: 1.8rem;
+  line-height: 1.05;
+}
+
+.learning-course-card p {
+  margin: 0;
+  color: #d68516;
+  font-weight: 800;
+}
+
+.learning-progress-track,
+.reward-progress-track {
+  width: 100%;
+  height: 10px;
+  border: 3px solid var(--line);
+  background: var(--panel-alt);
+}
+
+.learning-progress-fill,
+.reward-progress-fill {
+  display: block;
+  height: 100%;
+  background: #3f8d4a;
+}
+
+.learning-outline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.learning-outline-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  color: #2196f3;
+}
+
+.learning-outline-item.is-active .learning-outline-title {
+  color: #0d7fe1;
+}
+
+.learning-outline-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.learning-outline-title {
+  font-weight: 800;
+}
+
+.learning-attachments {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.learning-attachment-label {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: #37a84b;
+  font-size: 0.8rem;
+}
+
+.attachment-icon {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+}
+
+.learning-status {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  border: 3px solid #3ca2ff;
+  border-radius: 999px;
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.learning-status.is-completed {
+  align-items: center;
+  justify-content: center;
+  background: #3ca2ff;
+  color: var(--panel);
+}
+
+.status-check-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.learning-status.is-current {
+  background: #3ca2ff;
+}
+
+.learning-main-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px;
+}
+
+.learning-description-strip,
+.learning-viewer-card,
+.quiz-intro-card,
+.quiz-question-card,
+.learning-reward-card {
+  border: 4px solid var(--line);
+  background: var(--panel);
+}
+
+.learning-description-strip {
+  padding: 16px;
+  color: #d68516;
+  font-size: 0.95rem;
+}
+
+.learning-viewer-card {
+  flex: 1;
+  padding: 0;
+  overflow: hidden;
+  min-height: 420px;
+}
+
+.learning-viewer-card h1 {
+  margin: 0;
+  padding: 14px 16px;
+  font-family: Manrope, "Segoe UI", sans-serif;
+  font-size: 1.8rem;
+}
+
+.learning-iframe {
+  display: block;
+  width: 100%;
+  min-height: 440px;
+  border: 0;
+  background: #000;
+}
+
+.quiz-intro-card,
+.quiz-question-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  justify-content: center;
+  min-height: 420px;
+  padding: 24px;
+}
+
+.quiz-intro-copy {
+  width: min(100%, 420px);
+  border: 3px solid var(--line);
+  border-radius: 18px;
+  padding: 28px;
+  color: #d95e65;
+  font-size: 1.2rem;
+}
+
+.quiz-main-button {
+  min-width: 0;
+}
+
+.quiz-question-meta {
+  width: min(100%, 520px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.quiz-question-prompt {
+  width: min(100%, 520px);
+  border-bottom: 3px solid var(--line);
+  padding-bottom: 12px;
+}
+
+.quiz-options {
+  width: min(100%, 520px);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.quiz-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.quiz-radio {
+  width: 18px;
+  height: 18px;
+  border: 3px solid var(--line);
+  border-radius: 999px;
+}
+
+.quiz-radio.is-selected {
+  border-color: #3ca2ff;
+  background: #3ca2ff;
+}
+
+.learning-footer-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.learning-footer-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 4px solid var(--line);
+  background: #a87df0;
+  color: var(--bg);
+  padding: 10px 16px;
+  box-shadow: var(--hard-shadow);
+  font-weight: 900;
+}
+
+.learning-footer-button .inline-icon {
+  transform: rotate(180deg);
+}
+
+.learning-reward-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 420px;
+}
+
+.learning-reward-card {
+  width: min(100%, 560px);
+  min-height: 360px;
+  padding: 28px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.reward-close-button {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.learning-reward-card h1 {
+  margin: 0;
+  font-family: Manrope, "Segoe UI", sans-serif;
+  font-size: 2.8rem;
+}
+
+.reward-scale {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.reward-message {
+  margin: auto 0 0;
+  font-size: 1.6rem;
+  line-height: 1.4;
 }
 
 /* My Courses dashboard */
@@ -858,7 +1355,22 @@ img {
     align-items: stretch;
   }
 
+  .navbar-actions {
+    justify-content: stretch;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .player-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .reviews-summary-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .learning-player-frame {
     grid-template-columns: 1fr;
   }
 
@@ -904,5 +1416,13 @@ img {
   .badge-row {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .learning-page-shell {
+    padding: 12px;
+  }
+
+  .learning-main-panel {
+    padding: 12px;
   }
 }

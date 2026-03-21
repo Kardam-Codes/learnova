@@ -5,12 +5,20 @@
  * What it is: A placeholder payment page so Buy Course buttons already lead somewhere concrete.
  */
 import { Link, useParams } from "react-router-dom";
+import Navbar from "../components/Navbar";
 
-export default function PaymentFlowPage() {
+export default function PaymentFlowPage({ theme, toggleTheme }) {
   const { courseId } = useParams();
 
   return (
     <main className="course-page-shell">
+      <Navbar
+        brandName="KaiCrypt"
+        learnerName="Kardam"
+        theme={theme}
+        toggleTheme={toggleTheme}
+      />
+
       <div className="course-page-card reviews-shell">
         <div className="reviews-header">
           <div>
