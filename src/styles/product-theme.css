@@ -148,7 +148,21 @@ textarea,
 
 .brand-wordmark,
 .auth-logo-wordmark {
-  font-weight: 700;
+  font-family: "Avenir Next", "Trebuchet MS", "Segoe UI", "Gill Sans", sans-serif !important;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-style: normal !important;
+}
+
+.brand-wordmark {
+  font-size: clamp(1.45rem, 2.2vw, 1.95rem) !important;
+  line-height: 1;
+}
+
+.auth-logo-wordmark {
+  font-size: clamp(1.9rem, 3vw, 2.35rem) !important;
+  line-height: 1;
 }
 
 .course-hero {
