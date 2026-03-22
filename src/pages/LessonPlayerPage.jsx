@@ -173,12 +173,16 @@ function LearningFooterAction({ label, onClick, disabled = false }) {
   );
 }
 
-function QuizChoices({ question, selectedIndex, onSelect }) {
+function QuizChoices({ question, selectedIndexes, onSelect }) {
+  const allowsMultipleAnswers = Boolean(question?.allowsMultipleAnswers);
+
   return (
     <div className="quiz-options">
       {question.options.map((option, optionIndex) => (
-        <label className="quiz-option" key={option} onClick={() => onSelect(optionIndex)}>
-          <span className={`quiz-radio ${selectedIndex === optionIndex ? "is-selected" : ""}`} />
+        <label className="quiz-option" key={`${question.id}-${optionIndex}`} onClick={() => onSelect(optionIndex)}>
+          <span
+            className={`quiz-radio ${selectedIndexes.includes(optionIndex) ? "is-selected" : ""} ${allowsMultipleAnswers ? "is-multiple" : ""}`}
+          />
           <span>{option}</span>
         </label>
       ))}
@@ -324,9 +328,10 @@ function LearningMainContent({
 
   const isFinalQuestion = questionNumber === questions.length - 1;
   const proceedLabel = isFinalQuestion ? "Proceed and Complete Quiz" : "Proceed";
-  const selectedIndex = currentQuestion
-    ? quizSelections[currentQuestion.id] ?? null
-    : null;
+  const selectedIndexes = currentQuestion
+    ? quizSelections[currentQuestion.id] ?? []
+    : [];
+  const hasSelection = selectedIndexes.length > 0;
 
   return (
     <>
@@ -340,14 +345,14 @@ function LearningMainContent({
         <div className="quiz-question-prompt">{currentQuestion?.prompt}</div>
         <QuizChoices
           question={currentQuestion}
-          selectedIndex={selectedIndex}
+          selectedIndexes={selectedIndexes}
           onSelect={(optionIndex) => onSelectQuizOption(currentQuestion.id, optionIndex)}
         />
         <button
           type="button"
           className="catalog-action-button is-start quiz-main-button"
           onClick={() => onSubmitQuizAttempt({ isFinalQuestion, questionNumber })}
-          disabled={selectedIndex === null || isSubmittingQuiz}
+          disabled={!hasSelection || isSubmittingQuiz}
         >
           {proceedLabel}
         </button>
@@ -381,6 +386,7 @@ export default function LessonPlayerPage() {
     // Clear previous content-specific state immediately when the route changes.
     setContentOverride(null);
     setQuizReward(null);
+    setQuizSelections({});
   }, [contentId]);
 
   useEffect(() => {
@@ -461,7 +467,20 @@ export default function LessonPlayerPage() {
   const handleSelectQuizOption = (questionId, optionIndex) => {
     setQuizSelections((current) => ({
       ...current,
-      [questionId]: optionIndex,
+      [questionId]: (() => {
+        const currentSelections = current[questionId] ?? [];
+        const allowsMultipleAnswers = resolvedContentItem?.quizQuestions?.find(
+          (question) => question.id === questionId,
+        )?.allowsMultipleAnswers;
+
+        if (!allowsMultipleAnswers) {
+          return [optionIndex];
+        }
+
+        return currentSelections.includes(optionIndex)
+          ? currentSelections.filter((value) => value !== optionIndex)
+          : [...currentSelections, optionIndex].sort((left, right) => left - right);
+      })(),
     }));
   };
 
@@ -484,7 +503,7 @@ export default function LessonPlayerPage() {
       const response = await submitQuizAttemptRequest(course.id, resolvedContentItem.id, token, {
         answers: resolvedContentItem.quizQuestions.map((question) => ({
           questionId: question.id,
-          selectedOptionIndex: quizSelections[question.id],
+          selectedOptionIndexes: quizSelections[question.id] ?? [],
         })),
       });
 

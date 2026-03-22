@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS quiz_attempt_answers (
   question_id UUID NOT NULL REFERENCES quiz_questions(id) ON DELETE CASCADE,
   selected_option_id UUID NOT NULL REFERENCES quiz_options(id) ON DELETE CASCADE,
   is_correct BOOLEAN NOT NULL DEFAULT FALSE,
-  UNIQUE (attempt_id, question_id)
+  UNIQUE (attempt_id, question_id, selected_option_id)
 );
 
 CREATE TABLE IF NOT EXISTS course_progress (

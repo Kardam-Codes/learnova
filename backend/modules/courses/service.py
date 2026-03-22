@@ -213,7 +213,8 @@ def _load_quiz_map(cursor, content_ids: list[str]) -> dict[str, dict[str, Any]]:
                 "id": str(row["question_id"]),
                 "prompt": row["question_text"],
                 "options": [],
-                "correctOptionIndex": 0,
+                "_correctOptionIndexes": [],
+                "allowsMultipleAnswers": False,
             }
             question_map[question_key] = question_payload
             quiz_map[content_id]["quizQuestions"].append(question_payload)
@@ -221,9 +222,12 @@ def _load_quiz_map(cursor, content_ids: list[str]) -> dict[str, dict[str, Any]]:
         question_payload = question_map[question_key]
         question_payload["options"].append(row["option_text"])
         if row["is_correct"]:
-            question_payload["correctOptionIndex"] = int(row["option_order"]) - 1
+            question_payload["_correctOptionIndexes"].append(int(row["option_order"]) - 1)
 
     for content_id, payload in quiz_map.items():
+        for question_payload in payload["quizQuestions"]:
+            question_payload["allowsMultipleAnswers"] = len(question_payload["_correctOptionIndexes"]) > 1
+            question_payload.pop("_correctOptionIndexes", None)
         payload["quizRules"]["totalQuestions"] = len(payload["quizQuestions"])
 
     for row in reward_rows:
@@ -923,10 +927,11 @@ def submit_quiz_attempt(course_slug: str, content_slug: str, user: dict[str, Any
             for row in question_rows:
                 options_by_question[str(row["question_id"])].append(row)
 
-            submitted_answer_map = {
-                answer["questionId"]: int(answer["selectedOptionIndex"])
-                for answer in answers
-            }
+            submitted_answer_map: dict[str, list[int]] = {}
+            for answer in answers:
+                selected_indexes = answer.get("selectedOptionIndexes") or []
+                normalized_indexes = sorted({int(index) for index in selected_indexes})
+                submitted_answer_map[answer["questionId"]] = normalized_indexes
 
             if len(submitted_answer_map) != len(options_by_question):
                 raise HTTPException(
@@ -953,25 +958,37 @@ def submit_quiz_attempt(course_slug: str, content_slug: str, user: dict[str, Any
             correct_answers = 0
             answer_records = []
             for question_id, option_rows in options_by_question.items():
-                selected_index = submitted_answer_map.get(question_id)
-                if selected_index is None or selected_index >= len(option_rows):
+                selected_indexes = submitted_answer_map.get(question_id, [])
+                if not selected_indexes:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail="One or more quiz answers are invalid.",
                     )
 
-                selected_option = option_rows[selected_index]
-                is_correct = bool(selected_option["is_correct"])
+                if any(selected_index >= len(option_rows) for selected_index in selected_indexes):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="One or more quiz answers are invalid.",
+                    )
+
+                correct_option_indexes = {
+                    index
+                    for index, option_row in enumerate(option_rows)
+                    if option_row["is_correct"]
+                }
+                selected_option_rows = [option_rows[selected_index] for selected_index in selected_indexes]
+                is_correct = set(selected_indexes) == correct_option_indexes
                 if is_correct:
                     correct_answers += 1
 
-                answer_records.append(
-                    {
-                        "question_id": question_id,
-                        "selected_option_id": str(selected_option["option_id"]),
-                        "is_correct": is_correct,
-                    }
-                )
+                for selected_option in selected_option_rows:
+                    answer_records.append(
+                        {
+                            "question_id": question_id,
+                            "selected_option_id": str(selected_option["option_id"]),
+                            "is_correct": is_correct,
+                        }
+                    )
 
             score = round((correct_answers / max(len(options_by_question), 1)) * 100, 2)
             reward_row = _fetch_one(

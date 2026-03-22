@@ -9,6 +9,8 @@ What it is: Pydantic models for review submission and quiz attempts.
 
 from __future__ import annotations
 
+from typing import Annotated
+
 from pydantic import BaseModel, Field
 
 
@@ -19,7 +21,7 @@ class ReviewSubmissionRequest(BaseModel):
 
 class QuizAnswerRequest(BaseModel):
     questionId: str
-    selectedOptionIndex: int = Field(ge=0)
+    selectedOptionIndexes: list[Annotated[int, Field(ge=0)]] = Field(min_length=1)
 
 
 class QuizAttemptRequest(BaseModel):
