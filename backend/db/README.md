@@ -5,6 +5,7 @@ This folder contains the PostgreSQL bootstrap assets for Learnova:
 - a full snapshot schema
 - ordered migrations
 - demo seed data
+- generated bulk/reporting seed helpers
 
 ## Files
 
@@ -12,6 +13,9 @@ This folder contains the PostgreSQL bootstrap assets for Learnova:
 backend/db/
 |- schema.sql
 |- seed.sql
+|- bulk_seed_200.sql
+|- reporting_seed_40_courses_320_rows.sql
+|- load_bulk_schema_data.py
 `- migrations/
    |- 001_extensions_and_enums.sql
    |- 002_core_entities.sql
@@ -44,6 +48,21 @@ psql -U postgres -d learnova -f backend/db/migrations/003_learning_progress_and_
 ```bash
 psql -U postgres -d learnova -f backend/db/seed.sql
 ```
+
+## 3b. Large Reporting Seed
+
+For a larger reporting-focused dataset:
+
+```bash
+python backend/db/load_bulk_schema_data.py --dataset reporting --course-count 40 --reporting-rows 320
+psql -U postgres -d learnova -f backend/db/reporting_seed_40_courses_320_rows.sql
+```
+
+This generates:
+- 40 published courses
+- 320 `course_attendees` rows
+- 320 `course_progress` rows
+- supporting content, quizzes, quiz attempts, content progress, point events, and reviews
 
 ## 4. Alternative: Apply Full Snapshot
 
