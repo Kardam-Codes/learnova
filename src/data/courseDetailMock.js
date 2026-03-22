@@ -91,7 +91,6 @@ const odooContentItems = [
   createVideoContent(),
   createDocumentContent(),
   createQuizContent(),
-  createWrapUpContent(),
 ];
 
 function createVideoContent() {
@@ -147,7 +146,7 @@ function createQuizContent() {
     duration: "3 questions",
     description:
       "Answer a quick quiz on stage automation, lead scoring, and follow-up discipline before unlocking the final content.",
-    nextContentId: "lead-management-templates",
+    nextContentId: null,
     reward: {
       pointsEarned: 20,
       nextTarget: 100,
@@ -188,28 +187,6 @@ function createQuizContent() {
   });
 }
 
-function createWrapUpContent() {
-  return createLesson({
-    id: "lead-management-templates",
-    title: "Lead Management Templates",
-    mode: LEARNING_CONTENT_MODE.DOCUMENT,
-    status: COURSE_CONTENT_STATUS.NOT_STARTED,
-    order: 4,
-    duration: "9 min",
-    description:
-      "Use repeatable lead templates and handoff notes to make the final stretch of your CRM workflow easier to execute.",
-    contentUrl: LOCAL_SAMPLE_PDF,
-    attachments: [
-      createAttachment(
-        "lead-template-pack",
-        "Lead template pack",
-        "https://example.com/lead-templates.pdf",
-      ),
-    ],
-    nextContentId: null,
-  });
-}
-
 function buildCourse({
   id,
   title,
@@ -244,10 +221,10 @@ export const courseDetailMockById = {
     coverImage:
       "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1600&q=80",
     progress: {
-      completionPercentage: 30,
-      totalCount: 4,
+      completionPercentage: 33,
+      totalCount: 3,
       completedCount: 1,
-      incompleteCount: 3,
+      incompleteCount: 2,
     },
     contentItems: odooContentItems,
     reviews: createReviewSummary(
@@ -286,9 +263,9 @@ export const courseDetailMockById = {
       "https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=1600&q=80",
     progress: {
       completionPercentage: 0,
-      totalCount: 4,
+      totalCount: 3,
       completedCount: 0,
-      incompleteCount: 4,
+      incompleteCount: 3,
     },
     contentItems: [
       createLesson({
@@ -326,7 +303,7 @@ export const courseDetailMockById = {
         order: 3,
         duration: "3 questions",
         description: "Check how quickly your playbook should respond to high-intent leads.",
-        nextContentId: "handoff-checklist",
+        nextContentId: null,
         reward: {
           pointsEarned: 15,
           nextTarget: 100,
@@ -352,18 +329,6 @@ export const courseDetailMockById = {
             correctOptionIndex: 0,
           },
         ],
-      }),
-      createLesson({
-        id: "handoff-checklist",
-        title: "Sales Handoff Checklist",
-        mode: LEARNING_CONTENT_MODE.DOCUMENT,
-        status: COURSE_CONTENT_STATUS.NOT_STARTED,
-        order: 4,
-        duration: "8 min",
-        description: "Finalize a clean transition from marketing to sales.",
-        contentUrl: LOCAL_SAMPLE_PDF,
-        attachments: [],
-        nextContentId: null,
       }),
     ],
     reviews: createReviewSummary(
@@ -489,10 +454,10 @@ export const courseDetailMockById = {
     coverImage:
       "https://images.unsplash.com/photo-1518186233392-c232efbf2373?auto=format&fit=crop&w=1600&q=80",
     progress: {
-      completionPercentage: 75,
-      totalCount: 4,
+      completionPercentage: 100,
+      totalCount: 3,
       completedCount: 3,
-      incompleteCount: 1,
+      incompleteCount: 0,
     },
     contentItems: [
       createLesson({
@@ -526,7 +491,7 @@ export const courseDetailMockById = {
         order: 3,
         duration: "3 questions",
         description: "Test how well you can read dashboards and spot warning signs.",
-        nextContentId: "retention-dashboard",
+        nextContentId: null,
         reward: {
           pointsEarned: 20,
           nextTarget: 120,
@@ -552,24 +517,6 @@ export const courseDetailMockById = {
             correctOptionIndex: 1,
           },
         ],
-      }),
-      createLesson({
-        id: "retention-dashboard",
-        title: "Retention Dashboard",
-        mode: LEARNING_CONTENT_MODE.DOCUMENT,
-        status: COURSE_CONTENT_STATUS.IN_PROGRESS,
-        order: 4,
-        duration: "10 min",
-        description: "Build a retention view that keeps churn risk visible.",
-        contentUrl: LOCAL_SAMPLE_PDF,
-        attachments: [
-          createAttachment(
-            "retention-template",
-            "Retention dashboard template",
-            "https://example.com/retention.pdf",
-          ),
-        ],
-        nextContentId: null,
       }),
     ],
     reviews: createReviewSummary(

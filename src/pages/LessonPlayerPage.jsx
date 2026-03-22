@@ -378,6 +378,12 @@ export default function LessonPlayerPage() {
   const [isLoadingCourse, setIsLoadingCourse] = useState(true);
 
   useEffect(() => {
+    // Clear previous content-specific state immediately when the route changes.
+    setContentOverride(null);
+    setQuizReward(null);
+  }, [contentId]);
+
+  useEffect(() => {
     let isMounted = true;
 
     const loadCourse = async () => {
@@ -443,7 +449,7 @@ export default function LessonPlayerPage() {
   }, [contentId, courseId, token]);
 
   const contentItem = course.contentItems.find((item) => item.id === contentId) ?? null;
-  const resolvedContentItem = contentOverride
+  const resolvedContentItem = contentOverride?.id === contentId
     ? contentItem
       ? {
         ...contentItem,
@@ -538,6 +544,10 @@ export default function LessonPlayerPage() {
     }
   }, [resolvedContentItem, course.id, mode, navigate]);
 
+  if (!resolvedContentItem) {
+    return null;
+  }
+
   return (
     <main className="learning-page-shell">
       <div className={`learning-player-frame ${isSidebarOpen ? "" : "is-sidebar-collapsed"}`}>
@@ -580,6 +590,7 @@ export default function LessonPlayerPage() {
             />
           ) : resolvedContentItem ? (
           <LearningMainContent
+            key={`${resolvedContentItem.id}:${location.pathname}`}
             course={course}
             contentItem={resolvedContentItem}
             questionIndex={questionIndex ?? null}

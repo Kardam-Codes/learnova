@@ -93,6 +93,6 @@ export const myCoursesMock = [
     isInProgress: false,
     detailPath: "/courses/crm-analytics",
     firstContentId: "metrics-foundation",
-    lastContentId: "retention-dashboard",
+    lastContentId: "analytics-quiz",
   },
 ];

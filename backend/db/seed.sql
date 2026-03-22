@@ -140,6 +140,12 @@ SET
   enrollment_source = EXCLUDED.enrollment_source,
   payment_status = EXCLUDED.payment_status;
 
+DELETE FROM course_content
+WHERE id IN (
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb004',
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb008'
+);
+
 INSERT INTO course_content (
   id, course_id, slug, title, content_type, content_mode, description, content_url,
   allow_download, duration_label, display_order, responsible_user_id
@@ -148,12 +154,9 @@ VALUES
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1', 'advanced-sales-automation', 'Advanced Sales & CRM Automation in Odoo', 'lesson', 'video', 'Watch how pipeline automation, activity suggestions, and sales team stages fit together inside Odoo CRM.', 'https://www.youtube.com/embed/dQw4w9WgXcQ', FALSE, '14 min', 1, '22222222-2222-2222-2222-222222222222'),
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb002', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1', 'odoo-best-practices', 'Odoo CRM: Advanced Features & Best Practices', 'lesson', 'document', 'Read the best-practice checklist covering segmentation, tags, saved filters, and weekly pipeline hygiene.', '/docs/dummy.pdf', TRUE, '11 min', 2, '22222222-2222-2222-2222-222222222222'),
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb003', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1', 'pipeline-quiz', 'Pipeline Configuration Quiz', 'quiz', 'quiz', 'Answer a quick quiz on stage automation, lead scoring, and follow-up discipline before unlocking the final content.', NULL, FALSE, '3 questions', 3, '22222222-2222-2222-2222-222222222222'),
-  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb004', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1', 'lead-management-templates', 'Lead Management Templates', 'lesson', 'document', 'Use repeatable lead templates and handoff notes to make the final stretch of your CRM workflow easier to execute.', '/docs/dummy.pdf', TRUE, '9 min', 4, '22222222-2222-2222-2222-222222222222'),
-
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb005', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2', 'lead-funnel-foundations', 'Lead Funnel Foundations', 'lesson', 'video', 'A practical overview of qualification stages and healthy lead movement.', 'https://www.youtube.com/embed/ysz5S6PUM-U', FALSE, '12 min', 1, '22222222-2222-2222-2222-222222222222'),
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb006', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2', 'lead-scoring-framework', 'Lead Scoring Framework', 'lesson', 'document', 'Set up a lightweight lead scoring model for better handoff decisions.', '/docs/dummy.pdf', TRUE, '10 min', 2, '22222222-2222-2222-2222-222222222222'),
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb007', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2', 'lead-response-quiz', 'Lead Response Time Quiz', 'quiz', 'quiz', 'Check how quickly your playbook should respond to high-intent leads.', NULL, FALSE, '3 questions', 3, '22222222-2222-2222-2222-222222222222'),
-  ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb008', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2', 'handoff-checklist', 'Sales Handoff Checklist', 'lesson', 'document', 'Finalize a clean transition from marketing to sales.', '/docs/dummy.pdf', TRUE, '8 min', 4, '22222222-2222-2222-2222-222222222222'),
 
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb009', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3', 'automation-blueprints', 'Automation Blueprints', 'lesson', 'video', 'Map trigger-based automations for lead movement and nurturing.', 'https://www.youtube.com/embed/aqz-KE-bpKQ', FALSE, '16 min', 1, '22222222-2222-2222-2222-222222222222'),
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb010', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3', 'trigger-design', 'Trigger Design Patterns', 'lesson', 'document', 'Choose the right event model for workflows that scale.', '/docs/dummy.pdf', TRUE, '13 min', 2, '22222222-2222-2222-2222-222222222222'),
@@ -183,7 +186,7 @@ VALUES
   ('93000000-0000-0000-0000-000000000001', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb001', 'file', 'Sales blueprint PDF', 'https://example.com/sales-blueprint.pdf'),
   ('93000000-0000-0000-0000-000000000002', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb002', 'file', 'Best practice checklist', 'https://example.com/best-practice-checklist.pdf'),
   ('93000000-0000-0000-0000-000000000003', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb006', 'file', 'Lead scoring sheet', 'https://example.com/scoring.pdf'),
-  ('93000000-0000-0000-0000-000000000004', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb008', 'file', 'Lead template pack', 'https://example.com/lead-templates.pdf')
+  ('93000000-0000-0000-0000-000000000004', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb006', 'file', 'Lead template pack', 'https://example.com/lead-templates.pdf')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO quizzes (id, course_id, content_id, title, max_attempts)
@@ -248,8 +251,8 @@ INSERT INTO course_progress (
   current_content_id, status, started_at, completed_at
 )
 VALUES
-  ('97000000-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1', '11111111-1111-1111-1111-111111111111', 30, 1, 3, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb001', 'in_progress', NOW() - INTERVAL '7 days', NULL),
-  ('97000000-0000-0000-0000-000000000002', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2', '11111111-1111-1111-1111-111111111111', 0, 0, 4, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb005', 'yet_to_start', NULL, NULL),
+  ('97000000-0000-0000-0000-000000000001', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1', '11111111-1111-1111-1111-111111111111', 33.33, 1, 2, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb001', 'in_progress', NOW() - INTERVAL '7 days', NULL),
+  ('97000000-0000-0000-0000-000000000002', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2', '11111111-1111-1111-1111-111111111111', 0, 0, 3, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb005', 'yet_to_start', NULL, NULL),
   ('97000000-0000-0000-0000-000000000003', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4', '11111111-1111-1111-1111-111111111111', 75, 3, 1, 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb014', 'in_progress', NOW() - INTERVAL '21 days', NULL)
 ON CONFLICT (course_id, user_id) DO UPDATE
 SET
