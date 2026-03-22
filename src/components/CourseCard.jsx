@@ -28,11 +28,26 @@ function getCourseAction(course) {
     return { label: "Join Course", to: "/my-courses", type: COURSE_ACCESS_STATE.JOIN };
   }
 
-  if (course.isPaid && !course.isPurchased) {
+  if (!course.isEnrolled && course.isPaid && !course.isPurchased) {
     return {
       label: "Buy Course",
       to: `/courses/${course.id}/payment`,
       type: COURSE_ACCESS_STATE.BUY,
+    };
+  }
+
+  if (!course.isEnrolled && course.accessRule === "invitation") {
+    return {
+      label: "Invitation Required",
+      type: COURSE_ACCESS_STATE.JOIN,
+      disabled: true,
+    };
+  }
+
+  if (!course.isEnrolled) {
+    return {
+      label: "Enroll Free",
+      type: COURSE_ACCESS_STATE.ENROLL,
     };
   }
 
@@ -51,9 +66,19 @@ function getCourseAction(course) {
   };
 }
 
-export default function CourseCard({ course }) {
+export default function CourseCard({ course, onEnrollCourse }) {
   const navigate = useNavigate();
   const action = getCourseAction(course);
+  const resolvedAction =
+    action.type === COURSE_ACCESS_STATE.ENROLL
+      ? {
+          ...action,
+          onClick: (event) => {
+            event.preventDefault();
+            onEnrollCourse?.(course);
+          },
+        }
+      : action;
   const showPaidBadge = course.isPaid && course.isPurchased;
   const openCourseDetail = () => navigate(course.detailPath);
   const handleCardKeyDown = (event) => {
@@ -98,7 +123,7 @@ export default function CourseCard({ course }) {
         </div>
 
         <div className="course-card-footer">
-          <ActionButton action={action} onClick={stopCardNavigation} />
+          <ActionButton action={resolvedAction} onClick={stopCardNavigation} />
           <div className="course-card-price">
             {course.isPaid ? `INR ${course.price}` : "Free"}
           </div>

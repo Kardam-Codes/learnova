@@ -24,6 +24,25 @@ export default function ContentRow({ item }) {
   const metaParts = [typeLabel[item.mode], item.duration].filter(Boolean);
   const orderLabel = String(item.order ?? "").padStart(2, "0");
 
+  if (item.isLocked) {
+    return (
+      <div className={`${rowClassName} is-locked`} aria-label={`${item.title} is locked`}>
+        <div className="content-row-main">
+          <span className="content-order">{orderLabel}</span>
+          <div className="content-copy">
+            <span className={`content-type-badge is-${item.mode}`}>
+              {typeLabel[item.mode]}
+            </span>
+            <span className="content-title">{item.title}</span>
+            <span className="content-meta">{metaParts.join(" | ")}</span>
+            <span className="content-lock-reason">{item.lockReason}</span>
+          </div>
+        </div>
+        <StatusIndicator status="not_started" />
+      </div>
+    );
+  }
+
   return (
     <Link
       className={rowClassName}

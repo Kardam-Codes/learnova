@@ -6,6 +6,9 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import InstructorNavbar from "../components/InstructorNavbar";
+import EmptyState from "../components/EmptyState";
+import LoadingBlock from "../components/LoadingBlock";
+import StatusBanner from "../components/StatusBanner";
 import { reportRows, reportSummary } from "../data/instructorMock";
 import { useAuth } from "../context/AuthContext";
 import { fetchAdminCourseProgressReportRequest } from "../utils/apiClient";
@@ -85,17 +88,34 @@ const summaryToFilterMap = {
   completed: "completed",
 };
 
-export default function ReportingDashboardPage() {
+const REPORT_COLUMNS = [
+  { id: "serial", label: "S.No.", render: (row) => row.id },
+  { id: "courseName", label: "Course Name", render: (row) => row.courseName },
+  { id: "participantName", label: "Participant name", render: (row) => row.participantName },
+  { id: "enrolledDate", label: "Enrolled Date", render: (row) => formatDisplayDate(row.enrolledDate) },
+  { id: "startDate", label: "Start date", render: (row) => formatDisplayDate(row.startDate) },
+  { id: "timeSpent", label: "Time spent", render: (row) => row.timeSpent },
+  { id: "completionPercentage", label: "Completion percentage", render: (row) => row.completionPercentage },
+  { id: "completedDate", label: "Completed date", render: (row) => formatDisplayDate(row.completedDate) },
+  { id: "status", label: "Status", render: (row) => formatStatusLabel(row.status) },
+];
+
+export default function ReportingDashboardPage({ theme, toggleTheme }) {
   const { token } = useAuth();
   const [summary, setSummary] = useState(reportSummary);
   const [rows, setRows] = useState(reportRows);
   const [activeFilter, setActiveFilter] = useState("");
   const [loadError, setLoadError] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [visibleColumns, setVisibleColumns] = useState(() =>
+    REPORT_COLUMNS.reduce((accumulator, column) => ({ ...accumulator, [column.id]: true }), {}),
+  );
 
   useEffect(() => {
     let isMounted = true;
 
     const loadReport = async () => {
+      setIsLoading(true);
       try {
         const response = await fetchAdminCourseProgressReportRequest(token, activeFilter || undefined);
         if (!isMounted) {
@@ -113,6 +133,10 @@ export default function ReportingDashboardPage() {
         setSummary(reportSummary);
         setRows(reportRows);
         setLoadError(error.message);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
@@ -129,9 +153,24 @@ export default function ReportingDashboardPage() {
     return rows.length === 1 ? "1 row" : `${rows.length} rows`;
   }, [rows]);
 
+  const activeColumns = REPORT_COLUMNS.filter((column) => visibleColumns[column.id]);
+
+  const toggleColumn = (columnId) => {
+    setVisibleColumns((current) => {
+      const currentlyVisible = Object.values(current).filter(Boolean).length;
+      if (current[columnId] && currentlyVisible === 1) {
+        return current;
+      }
+      return {
+        ...current,
+        [columnId]: !current[columnId],
+      };
+    });
+  };
+
   return (
     <main className="course-page-shell instructor-page-shell">
-      <InstructorNavbar />
+      <InstructorNavbar theme={theme} toggleTheme={toggleTheme} />
 
       <div className="course-page-card instructor-shell">
         <section className="reporting-shell reporting-shell-annotated">
@@ -139,12 +178,19 @@ export default function ReportingDashboardPage() {
             <TableBadge label="Overview" />
           </div>
 
-          {loadError ? (
-            <p className="content-empty">
-              Live report data could not be loaded. Showing fallback report data.
-            </p>
-          ) : null}
+          <StatusBanner
+            tone={loadError ? "error" : "info"}
+            message={loadError ? "Live report data could not be loaded. Showing fallback report data." : ""}
+            onClose={() => setLoadError("")}
+          />
 
+          {isLoading ? (
+            <LoadingBlock
+              title="Loading reporting insights"
+              description="Collecting participants, status counts, and progress rows."
+            />
+          ) : (
+          <>
           <div className="report-summary-grid report-summary-grid-annotated">
             {summary.map((item) => {
               const filterValue = summaryToFilterMap[item.id] ?? "";
@@ -169,40 +215,63 @@ export default function ReportingDashboardPage() {
             })}
           </div>
 
+          <div className="reporting-layout-grid">
           <div className="reporting-table-shell reporting-table-shell-annotated">
             <div className="reporting-section-row reporting-section-row-between">
               <TableBadge label="Users" />
-              <span className="content-empty">{totalRowsLabel}</span>
+              <span className="reporting-row-count">{totalRowsLabel}</span>
             </div>
 
+            {rows.length ? (
             <div className="reporting-table">
-              <div className="reporting-table-head reporting-table-head-annotated">
-                <span>S.No.</span>
-                <span>Course Name</span>
-                <span>Participant name</span>
-                <span>Enrolled Date</span>
-                <span>Start date</span>
-                <span>Time spent</span>
-                <span>Completion percentage</span>
-                <span>Completed date</span>
-                <span>Status</span>
+              <div
+                className="reporting-table-head reporting-table-head-annotated"
+                style={{ gridTemplateColumns: `repeat(${activeColumns.length}, minmax(120px, 1fr))` }}
+              >
+                {activeColumns.map((column) => (
+                  <span key={column.id}>{column.label}</span>
+                ))}
               </div>
 
               {rows.map((row) => (
-                <div key={`${row.courseName}-${row.participantName}-${row.id}`} className="reporting-table-row reporting-table-row-annotated">
-                  <span>{row.id}</span>
-                  <span>{row.courseName}</span>
-                  <span>{row.participantName}</span>
-                  <span>{formatDisplayDate(row.enrolledDate)}</span>
-                  <span>{formatDisplayDate(row.startDate)}</span>
-                  <span>{row.timeSpent}</span>
-                  <span>{row.completionPercentage}</span>
-                  <span>{formatDisplayDate(row.completedDate)}</span>
-                  <span>{formatStatusLabel(row.status)}</span>
+                <div
+                  key={`${row.courseName}-${row.participantName}-${row.id}`}
+                  className="reporting-table-row reporting-table-row-annotated"
+                  style={{ gridTemplateColumns: `repeat(${activeColumns.length}, minmax(120px, 1fr))` }}
+                >
+                  {activeColumns.map((column) => (
+                    <span key={column.id}>{column.render(row)}</span>
+                  ))}
                 </div>
               ))}
             </div>
+            ) : (
+              <EmptyState
+                title="No matching learners"
+                description="Try removing the current filter to view the full course progress report."
+              />
+            )}
           </div>
+          <aside className="reporting-column-panel">
+            <div className="reporting-section-row">
+              <TableBadge label="Columns" />
+            </div>
+            <div className="reporting-column-list">
+              {REPORT_COLUMNS.map((column) => (
+                <label key={column.id} className="reporting-column-toggle">
+                  <input
+                    type="checkbox"
+                    checked={visibleColumns[column.id]}
+                    onChange={() => toggleColumn(column.id)}
+                  />
+                  <span>{column.label}</span>
+                </label>
+              ))}
+            </div>
+          </aside>
+          </div>
+          </>
+          )}
         </section>
       </div>
     </main>

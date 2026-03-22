@@ -4,15 +4,17 @@
  * Purpose: Show the shared top navigation across learner-facing pages.
  * What it is: A reusable header with brand identity, learner account state, and theme switching.
  */
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 function BrandLogoIcon() {
   return (
-    <svg viewBox="0 0 32 32" className="brand-logo-icon" aria-hidden="true">
-      <path d="M6 24V8h4v12h14v4Z" fill="currentColor" />
-      <path d="M12 8h14v4H16v14h-4Z" fill="currentColor" opacity="0.72" />
-      <path d="M20 14h6v12H14v-6h6Z" fill="none" stroke="currentColor" strokeWidth="2.6" />
+    <svg viewBox="0 0 64 64" className="brand-logo-icon" aria-hidden="true">
+      <rect width="64" height="64" rx="10" fill="currentColor" opacity="0.12" />
+      <path d="M12 12h12v28h16v12H12Z" fill="currentColor" />
+      <path d="M28 12h24v12H40v16H28Z" fill="currentColor" opacity="0.9" />
+      <path d="M40 24h12v28H24V40h16Z" fill="none" stroke="currentColor" strokeWidth="6" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -47,9 +49,38 @@ export default function Navbar({ brandName, learnerName, theme, toggleTheme }) {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
   const resolvedLearnerName = user?.name ?? learnerName;
+  const [isHidden, setIsHidden] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      const delta = currentScrollY - lastScrollY.current;
+
+      setIsScrolled(currentScrollY > 10);
+
+      if (currentScrollY <= 18) {
+        setIsHidden(false);
+      } else if (delta > 8) {
+        setIsHidden(true);
+      } else if (delta < -6) {
+        setIsHidden(false);
+      }
+
+      lastScrollY.current = currentScrollY;
+    };
+
+    lastScrollY.current = window.scrollY;
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
 
   return (
-    <header className="page-navbar">
+    <header className={`page-navbar${isHidden ? " is-hidden" : ""}${isScrolled ? " is-scrolled" : ""}`}>
       {/* Brand area keeps the product identity visible on learner pages. */}
       <Link className="brand-lockup brand-wordmark-link" to={isAuthenticated ? "/my-courses" : "/auth/login"}>
         <BrandLogoIcon />

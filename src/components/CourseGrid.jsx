@@ -6,12 +6,12 @@
  */
 import CourseCard from "./CourseCard";
 
-export default function CourseGrid({ courses }) {
+export default function CourseGrid({ courses, onEnrollCourse }) {
   return (
     <section className="catalog-grid-shell">
       <div className="catalog-grid">
         {courses.map((course) => (
-          <CourseCard key={course.id} course={course} />
+          <CourseCard key={course.id} course={course} onEnrollCourse={onEnrollCourse} />
         ))}
       </div>
 

@@ -8,11 +8,6 @@ import { useEffect, useRef, useState } from "react";
 
 const GOOGLE_SCRIPT_ID = "learnova-google-identity";
 
-function decodeJwtPayload(credential) {
-  const payload = credential.split(".")[1];
-  return JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
-}
-
 export default function GoogleSignInButton({ onSuccess, onError }) {
   const buttonRef = useRef(null);
   const [isUnavailable, setIsUnavailable] = useState(false);
@@ -32,17 +27,7 @@ export default function GoogleSignInButton({ onSuccess, onError }) {
       buttonRef.current.innerHTML = "";
       window.google.accounts.id.initialize({
         client_id: clientId,
-        callback: (response) => {
-          try {
-            const payload = decodeJwtPayload(response.credential);
-            onSuccess({
-              name: payload.name,
-              email: payload.email,
-            });
-          } catch {
-            onError("Google sign-in could not decode the returned credential.");
-          }
-        },
+        callback: (response) => onSuccess(response.credential),
       });
 
       window.google.accounts.id.renderButton(buttonRef.current, {

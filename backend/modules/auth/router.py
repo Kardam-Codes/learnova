@@ -10,16 +10,25 @@ What it is: A FastAPI router for auth endpoints and basic backend connectivity c
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends
+from pydantic import EmailStr
 
 from backend.modules.auth.dependencies import get_current_token_payload
 from backend.modules.auth.schemas import (
     AuthResponse,
+    EmailAvailabilityResponse,
+    GoogleAuthRequest,
     LoginRequest,
     RegisterRequest,
     TokenPayload,
     UserResponse,
 )
-from backend.modules.auth.service import check_database_health, login_user, register_user
+from backend.modules.auth.service import (
+    check_database_health,
+    check_email_availability,
+    login_user,
+    login_with_google,
+    register_user,
+)
 from backend.modules.auth.service import get_user_by_id
 
 
@@ -60,6 +69,27 @@ def login(payload: LoginRequest):
         password=payload.password,
         requested_role=payload.role,
     )
+
+
+@router.post("/auth/google", response_model=AuthResponse)
+def google_login(payload: GoogleAuthRequest):
+    """
+    This verifies a Google credential on the backend and returns a Learnova session token.
+    """
+
+    return login_with_google(
+        credential=payload.credential,
+        requested_role=payload.role,
+    )
+
+
+@router.get("/auth/check-email", response_model=EmailAvailabilityResponse)
+def check_email(email: EmailStr):
+    """
+    This validates whether an account already exists for the supplied email.
+    """
+
+    return check_email_availability(str(email))
 
 
 @router.get("/auth/me", response_model=UserResponse)

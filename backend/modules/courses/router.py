@@ -13,6 +13,8 @@ from fastapi import APIRouter, Depends
 
 from backend.modules.auth.dependencies import get_current_user
 from backend.modules.courses.service import (
+    create_course_payment_order,
+    enroll_in_course,
     get_course_content_for_user,
     get_course_detail_for_user,
     get_course_reviews_for_user,
@@ -21,9 +23,11 @@ from backend.modules.courses.service import (
     submit_course_review,
     submit_quiz_attempt,
     update_content_progress_for_user,
+    verify_course_payment,
 )
 from backend.modules.courses.schemas import (
     ContentProgressUpdateRequest,
+    PaymentVerificationRequest,
     QuizAttemptRequest,
     ReviewSubmissionRequest,
 )
@@ -39,6 +43,15 @@ def list_courses(current_user: dict = Depends(get_current_user)):
     """
 
     return list_courses_for_user(current_user)
+
+
+@router.post("/{course_slug}/enroll")
+def post_course_enrollment(course_slug: str, current_user: dict = Depends(get_current_user)):
+    """
+    This enrolls the current learner in a free self-enrollable course.
+    """
+
+    return enroll_in_course(course_slug, current_user)
 
 
 @router.get("/{course_slug}")
@@ -70,6 +83,28 @@ def post_course_review(
     """
 
     return submit_course_review(course_slug, current_user, payload.rating, payload.comment)
+
+
+@router.post("/{course_slug}/payments/order")
+def post_payment_order(course_slug: str, current_user: dict = Depends(get_current_user)):
+    """
+    This creates a Razorpay order for a paid course enrollment.
+    """
+
+    return create_course_payment_order(course_slug, current_user)
+
+
+@router.post("/{course_slug}/payments/verify")
+def post_payment_verification(
+    course_slug: str,
+    payload: PaymentVerificationRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    This verifies the Razorpay signature and marks the course enrollment as paid.
+    """
+
+    return verify_course_payment(course_slug, current_user, payload.model_dump())
 
 
 @router.get("/{course_slug}/content/{content_slug}")

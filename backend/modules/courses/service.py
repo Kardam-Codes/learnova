@@ -11,11 +11,17 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Any
 
 from fastapi import HTTPException, status
 
 from backend.config.db import connect
+from backend.config.payments import (
+    create_razorpay_order,
+    get_razorpay_settings,
+    verify_razorpay_signature,
+)
 
 
 BADGE_TIERS = [
@@ -372,6 +378,101 @@ def _recalculate_course_progress(cursor, course_id: str, user_id: str, current_c
     }
 
 
+def _is_enrolled_from_row(course_row: dict[str, Any] | None) -> bool:
+    if not course_row:
+        return False
+    return bool(course_row.get("attendee_id")) and course_row.get("payment_status") in {"not_required", "paid"}
+
+
+def _load_course_access_row(
+    cursor,
+    course_slug: str,
+    user_id: str,
+    *,
+    published_only: bool = True,
+) -> dict[str, Any] | None:
+    published_clause = "AND c.is_published = TRUE" if published_only else ""
+    return _fetch_one(
+        cursor,
+        f"""
+        SELECT
+          c.id,
+          c.slug,
+          c.title,
+          c.short_description,
+          c.description,
+          c.thumbnail_url,
+          c.cover_image_url,
+          c.access_rule,
+          c.price,
+          c.is_published,
+          provider.name AS provider_name,
+          ca.id AS attendee_id,
+          ca.payment_status,
+          cp.completion_percentage,
+          cp.completed_count,
+          cp.incomplete_count,
+          cp.status AS progress_status
+        FROM courses c
+        LEFT JOIN users provider ON provider.id = c.responsible_user_id
+        LEFT JOIN course_attendees ca
+          ON ca.course_id = c.id AND ca.user_id = %s::uuid
+        LEFT JOIN course_progress cp
+          ON cp.course_id = c.id AND cp.user_id = %s::uuid
+        WHERE c.slug = %s
+        {published_clause};
+        """,
+        (user_id, user_id, course_slug),
+    )
+
+
+def _apply_content_locks(content_items: list[dict[str, Any]], is_enrolled: bool) -> list[dict[str, Any]]:
+    normalized_items = sorted(content_items, key=lambda item: item["order"])
+    completed_non_quiz_orders: set[int] = set()
+
+    for item in normalized_items:
+        is_locked = False
+        lock_reason = None
+
+        if not is_enrolled:
+            is_locked = True
+            lock_reason = "Enroll in this course to unlock the learning content."
+        elif item["mode"] == "quiz":
+            previous_learning_items = [
+                earlier
+                for earlier in normalized_items
+                if earlier["order"] < item["order"] and earlier["mode"] != "quiz"
+            ]
+            if previous_learning_items and not all(
+                earlier["status"] == "completed" for earlier in previous_learning_items
+            ):
+                is_locked = True
+                lock_reason = "Complete all previous lessons before attempting this quiz."
+
+        item["isLocked"] = is_locked
+        item["lockReason"] = lock_reason
+
+        if item["mode"] != "quiz" and item["status"] == "completed":
+            completed_non_quiz_orders.add(item["order"])
+
+    return normalized_items
+
+
+def _require_enrolled_course(course_row: dict[str, Any]) -> None:
+    if not _is_enrolled_from_row(course_row):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Enroll in this course before accessing the learning content.",
+        )
+
+
+def _get_locked_content_reason(content_items: list[dict[str, Any]], content_slug: str) -> str | None:
+    for item in content_items:
+        if item["id"] == content_slug:
+            return item.get("lockReason")
+    return None
+
+
 def list_courses_for_user(user: dict[str, Any]) -> dict[str, Any]:
     """
     This returns the learner dashboard payload with course-card data and profile data.
@@ -398,7 +499,8 @@ def list_courses_for_user(user: dict[str, Any]) -> dict[str, Any]:
                   first_content.slug AS first_content_slug,
                   first_content.content_mode AS first_content_mode,
                   last_content.slug AS last_content_slug,
-                  last_content.content_mode AS last_content_mode
+                  last_content.content_mode AS last_content_mode,
+                  ca.id AS attendee_id
                 FROM courses c
                 LEFT JOIN course_attendees ca
                   ON ca.course_id = c.id AND ca.user_id = %s::uuid
@@ -432,35 +534,45 @@ def list_courses_for_user(user: dict[str, Any]) -> dict[str, Any]:
             )
             profile = _get_profile(cursor, user["id"], user["name"])
 
-    courses = []
+    enrolled_courses = []
+    available_courses = []
     for row in course_rows:
         is_paid = row["access_rule"] == "payment"
-        payment_status = row["payment_status"] or ("not_required" if not is_paid else "pending")
+        payment_status = row["payment_status"] or ("pending" if is_paid else "not_required")
         progress_status = row["progress_status"] or "yet_to_start"
-        courses.append(
-            {
-                "id": row["slug"],
-                "title": row["title"],
-                "shortDescription": row["short_description"],
-                "coverImage": row["thumbnail_url"] or row["cover_image_url"],
-                "tags": tag_map.get(row["slug"], []),
-                "isPaid": is_paid,
-                "price": float(row["price"]) if row["price"] is not None else None,
-                "isPurchased": payment_status in {"paid", "not_required"},
-                "isLoggedIn": True,
-                "hasStarted": progress_status != "yet_to_start",
-                "isInProgress": progress_status == "in_progress",
-                "detailPath": f"/courses/{row['slug']}",
-                "firstContentId": row["first_content_slug"],
-                "firstContentMode": row["first_content_mode"],
-                "lastContentId": row["current_content_slug"] or row["last_content_slug"] or row["first_content_slug"],
-                "lastContentMode": row["last_content_mode"] or row["first_content_mode"],
-            }
-        )
+        is_enrolled = bool(row["attendee_id"]) and payment_status in {"paid", "not_required"}
+        course_payload = {
+            "id": row["slug"],
+            "title": row["title"],
+            "shortDescription": row["short_description"],
+            "coverImage": row["thumbnail_url"] or row["cover_image_url"],
+            "tags": tag_map.get(row["slug"], []),
+            "isPaid": is_paid,
+            "price": float(row["price"]) if row["price"] is not None else None,
+            "accessRule": row["access_rule"],
+            "paymentStatus": payment_status,
+            "isPurchased": payment_status == "paid" if is_paid else is_enrolled,
+            "isEnrolled": is_enrolled,
+            "isLoggedIn": True,
+            "hasStarted": is_enrolled and progress_status != "yet_to_start",
+            "isInProgress": is_enrolled and progress_status == "in_progress",
+            "detailPath": f"/courses/{row['slug']}",
+            "firstContentId": row["first_content_slug"],
+            "firstContentMode": row["first_content_mode"],
+            "lastContentId": row["current_content_slug"] or row["last_content_slug"] or row["first_content_slug"],
+            "lastContentMode": row["last_content_mode"] or row["first_content_mode"],
+        }
+
+        if is_enrolled:
+            enrolled_courses.append(course_payload)
+        else:
+            available_courses.append(course_payload)
 
     return {
         "profile": profile,
-        "courses": courses,
+        "courses": enrolled_courses,
+        "enrolledCourses": enrolled_courses,
+        "availableCourses": available_courses,
     }
 
 
@@ -471,35 +583,18 @@ def get_course_detail_for_user(course_slug: str, user: dict[str, Any]) -> dict[s
 
     with connect() as connection:
         with connection.cursor() as cursor:
-            course_row = _fetch_one(
-                cursor,
-                """
-                SELECT
-                  c.id,
-                  c.slug,
-                  c.title,
-                  c.short_description,
-                  c.thumbnail_url,
-                  c.cover_image_url,
-                  u.name AS provider_name,
-                  cp.completion_percentage,
-                  cp.completed_count,
-                  cp.incomplete_count
-                FROM courses c
-                LEFT JOIN users u ON u.id = c.responsible_user_id
-                LEFT JOIN course_progress cp
-                  ON cp.course_id = c.id AND cp.user_id = %s::uuid
-                WHERE c.slug = %s AND c.is_published = TRUE;
-                """,
-                (user["id"], course_slug),
-            )
+            course_row = _load_course_access_row(cursor, course_slug, user["id"], published_only=True)
             if not course_row:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Course not found.",
                 )
 
-            content_items = _serialize_content_items(cursor, str(course_row["id"]), user["id"])
+            is_enrolled = _is_enrolled_from_row(course_row)
+            content_items = _apply_content_locks(
+                _serialize_content_items(cursor, str(course_row["id"]), user["id"]),
+                is_enrolled,
+            )
             reviews = get_course_reviews_for_user(course_slug, user, cursor=cursor)
 
     total_count = len(content_items)
@@ -515,6 +610,12 @@ def get_course_detail_for_user(course_slug: str, user: dict[str, Any]) -> dict[s
         "coverImage": course_row["cover_image_url"],
         "providerName": course_row["provider_name"] or "Learnova",
         "learnerName": user["name"],
+        "price": float(course_row["price"]) if course_row["price"] is not None else 0,
+        "isEnrolled": is_enrolled,
+        "paymentStatus": course_row["payment_status"] or ("pending" if course_row["access_rule"] == "payment" else "not_required"),
+        "accessRule": course_row["access_rule"],
+        "canEnrollFree": course_row["access_rule"] == "open" and not is_enrolled,
+        "requiresPayment": course_row["access_rule"] == "payment" and not is_enrolled,
         "progress": {
             "completionPercentage": completion_percentage,
             "totalCount": total_count,
@@ -567,9 +668,13 @@ def get_course_reviews_for_user(course_slug: str, user: dict[str, Any], cursor=N
             else 0
         )
 
+        course_access_row = _load_course_access_row(cursor, course_slug, user["id"], published_only=True)
+        is_enrolled = _is_enrolled_from_row(course_access_row)
+
         return {
             "averageRating": average_rating,
             "totalReviews": len(review_rows),
+            "isEnrolled": is_enrolled,
             "items": [
                 {
                     "id": str(row["id"]),
@@ -594,21 +699,24 @@ def get_course_content_for_user(course_slug: str, content_slug: str, user: dict[
 
     with connect() as connection:
         with connection.cursor() as cursor:
-            course_row = _fetch_one(
-                cursor,
-                """
-                SELECT id, slug, title
-                FROM courses
-                WHERE slug = %s AND is_published = TRUE;
-                """,
-                (course_slug,),
-            )
+            course_row = _load_course_access_row(cursor, course_slug, user["id"], published_only=True)
             if not course_row:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Course not found.",
                 )
 
+            _require_enrolled_course(course_row)
+            content_items = _apply_content_locks(
+                _serialize_content_items(cursor, str(course_row["id"]), user["id"]),
+                True,
+            )
+            lock_reason = _get_locked_content_reason(content_items, content_slug)
+            if lock_reason:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=lock_reason,
+                )
             content_item = _serialize_single_content_item(cursor, course_slug, content_slug, user["id"])
 
     return {
@@ -632,11 +740,35 @@ def update_content_progress_for_user(
 
     with connect() as connection:
         with connection.cursor() as cursor:
+            course_row = _load_course_access_row(cursor, course_slug, user["id"], published_only=True)
+            if not course_row:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Course not found.",
+                )
+
+            _require_enrolled_course(course_row)
+            content_items = _apply_content_locks(
+                _serialize_content_items(cursor, str(course_row["id"]), user["id"]),
+                True,
+            )
+            lock_reason = _get_locked_content_reason(content_items, content_slug)
+            if lock_reason:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=lock_reason,
+                )
+
             content_row = _load_content_row_by_slug(cursor, course_slug, content_slug, user["id"])
             if not content_row:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Content not found.",
+                )
+            if content_row["content_mode"] == "quiz":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Quiz progress must be completed through quiz submission.",
                 )
 
             completed_at = datetime.now(timezone.utc) if status_value == "completed" else None
@@ -684,16 +816,13 @@ def submit_course_review(course_slug: str, user: dict[str, Any], rating: int, co
 
     with connect() as connection:
         with connection.cursor() as cursor:
-            course_row = _fetch_one(
-                cursor,
-                "SELECT id FROM courses WHERE slug = %s AND is_published = TRUE;",
-                (course_slug,),
-            )
+            course_row = _load_course_access_row(cursor, course_slug, user["id"], published_only=True)
             if not course_row:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Course not found.",
                 )
+            _require_enrolled_course(course_row)
 
             cursor.execute(
                 """
@@ -734,6 +863,24 @@ def submit_quiz_attempt(course_slug: str, content_slug: str, user: dict[str, Any
 
     with connect() as connection:
         with connection.cursor() as cursor:
+            course_row = _load_course_access_row(cursor, course_slug, user["id"], published_only=True)
+            if not course_row:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Course not found.",
+                )
+            _require_enrolled_course(course_row)
+            content_items = _apply_content_locks(
+                _serialize_content_items(cursor, str(course_row["id"]), user["id"]),
+                True,
+            )
+            lock_reason = _get_locked_content_reason(content_items, content_slug)
+            if lock_reason:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=lock_reason,
+                )
+
             quiz_row = _fetch_one(
                 cursor,
                 """
@@ -950,3 +1097,203 @@ def submit_quiz_attempt(course_slug: str, content_slug: str, user: dict[str, Any
         "nextTarget": next_target,
         "message": "Reach the next rank to gain more points.",
     }
+
+
+def enroll_in_course(course_slug: str, user: dict[str, Any]) -> dict[str, Any]:
+    """
+    This enrolls the current learner in a free open course.
+    """
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            course_row = _load_course_access_row(cursor, course_slug, user["id"], published_only=True)
+            if not course_row:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Course not found.",
+                )
+
+            if _is_enrolled_from_row(course_row):
+                connection.commit()
+                return get_course_detail_for_user(course_slug, user)
+
+            if course_row["access_rule"] == "payment":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This course requires payment before enrollment.",
+                )
+
+            if course_row["access_rule"] == "invitation":
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="This course can only be accessed by invited learners.",
+                )
+
+            cursor.execute(
+                """
+                INSERT INTO course_attendees (course_id, user_id, enrollment_source, payment_status)
+                VALUES (%s::uuid, %s::uuid, 'self', 'not_required')
+                ON CONFLICT (course_id, user_id)
+                DO UPDATE SET
+                  enrollment_source = 'self',
+                  payment_status = 'not_required';
+                """,
+                (course_row["id"], user["id"]),
+            )
+            connection.commit()
+
+    return get_course_detail_for_user(course_slug, user)
+
+
+def create_course_payment_order(course_slug: str, user: dict[str, Any]) -> dict[str, Any]:
+    """
+    This creates a Razorpay order and records the pending course payment.
+    """
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            course_row = _load_course_access_row(cursor, course_slug, user["id"], published_only=True)
+            if not course_row:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Course not found.",
+                )
+
+            if course_row["access_rule"] != "payment":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This course does not require a payment checkout.",
+                )
+
+            if _is_enrolled_from_row(course_row):
+                return {
+                    "alreadyPaid": True,
+                    "courseSlug": course_slug,
+                }
+
+            amount_paise = int(Decimal(str(course_row["price"])) * 100)
+            receipt = f"learnova-{course_slug}-{user['id'][:8]}"
+            razorpay_order = create_razorpay_order(
+                amount_paise=amount_paise,
+                receipt=receipt,
+                notes={
+                    "course_slug": course_slug,
+                    "user_id": user["id"],
+                },
+            )
+
+            cursor.execute(
+                """
+                INSERT INTO course_attendees (course_id, user_id, enrollment_source, payment_status)
+                VALUES (%s::uuid, %s::uuid, 'self', 'pending')
+                ON CONFLICT (course_id, user_id)
+                DO UPDATE SET
+                  payment_status = 'pending',
+                  enrollment_source = 'self';
+                """,
+                (course_row["id"], user["id"]),
+            )
+            cursor.execute(
+                """
+                INSERT INTO course_payment_orders (
+                  course_id, user_id, provider_order_id, amount_paise, currency, status, receipt
+                )
+                VALUES (%s::uuid, %s::uuid, %s, %s, %s, 'created', %s)
+                ON CONFLICT (provider_order_id)
+                DO UPDATE SET
+                  amount_paise = EXCLUDED.amount_paise,
+                  currency = EXCLUDED.currency,
+                  status = 'created',
+                  receipt = EXCLUDED.receipt;
+                """,
+                (
+                    course_row["id"],
+                    user["id"],
+                    razorpay_order["id"],
+                    amount_paise,
+                    razorpay_order.get("currency", get_razorpay_settings().currency),
+                    receipt,
+                ),
+            )
+            connection.commit()
+
+    return {
+        "courseSlug": course_slug,
+        "courseTitle": course_row["title"],
+        "amount": amount_paise,
+        "currency": razorpay_order.get("currency", get_razorpay_settings().currency),
+        "orderId": razorpay_order["id"],
+        "receipt": receipt,
+        "keyId": get_razorpay_settings().key_id,
+        "learnerName": user["name"],
+        "learnerEmail": user["email"],
+    }
+
+
+def verify_course_payment(course_slug: str, user: dict[str, Any], payload: dict[str, str]) -> dict[str, Any]:
+    """
+    This verifies the Razorpay callback payload and marks the learner as paid/enrolled.
+    """
+
+    if not verify_razorpay_signature(
+        order_id=payload["razorpayOrderId"],
+        payment_id=payload["razorpayPaymentId"],
+        signature=payload["razorpaySignature"],
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Payment verification failed.",
+        )
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            course_row = _load_course_access_row(cursor, course_slug, user["id"], published_only=True)
+            if not course_row:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Course not found.",
+                )
+
+            payment_order = _fetch_one(
+                cursor,
+                """
+                SELECT id
+                FROM course_payment_orders
+                WHERE
+                  course_id = %s::uuid
+                  AND user_id = %s::uuid
+                  AND provider_order_id = %s;
+                """,
+                (course_row["id"], user["id"], payload["razorpayOrderId"]),
+            )
+            if not payment_order:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Payment order record was not found.",
+                )
+
+            cursor.execute(
+                """
+                UPDATE course_payment_orders
+                SET
+                  provider_payment_id = %s,
+                  status = 'paid',
+                  verified_at = NOW()
+                WHERE id = %s::uuid;
+                """,
+                (payload["razorpayPaymentId"], payment_order["id"]),
+            )
+            cursor.execute(
+                """
+                INSERT INTO course_attendees (course_id, user_id, enrollment_source, payment_status)
+                VALUES (%s::uuid, %s::uuid, 'self', 'paid')
+                ON CONFLICT (course_id, user_id)
+                DO UPDATE SET
+                  payment_status = 'paid',
+                  enrollment_source = 'self';
+                """,
+                (course_row["id"], user["id"]),
+            )
+            connection.commit()
+
+    return get_course_detail_for_user(course_slug, user)

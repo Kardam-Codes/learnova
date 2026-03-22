@@ -9,6 +9,9 @@ What it is: Service helpers for user registration, login, token generation, and 
 
 from __future__ import annotations
 
+import json
+import os
+from urllib import error, parse, request
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -62,6 +65,53 @@ def _serialize_user(user_row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _get_google_client_id() -> str:
+    return os.getenv("GOOGLE_CLIENT_ID", os.getenv("VITE_GOOGLE_CLIENT_ID", "")).strip()
+
+
+def _verify_google_credential(credential: str) -> dict[str, Any]:
+    token_info_url = (
+        "https://oauth2.googleapis.com/tokeninfo?"
+        + parse.urlencode({"id_token": credential})
+    )
+
+    try:
+        with request.urlopen(token_info_url, timeout=15) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except error.HTTPError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Google credential verification failed.",
+        ) from exc
+    except error.URLError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Could not reach Google for sign-in verification.",
+        ) from exc
+
+    expected_client_id = _get_google_client_id()
+    audience = payload.get("aud", "")
+    if expected_client_id and audience != expected_client_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Google credential was issued for a different client application.",
+        )
+
+    if payload.get("email_verified") not in {"true", True}:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Google account email is not verified.",
+        )
+
+    if not payload.get("email") or not payload.get("sub"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Google profile payload is incomplete.",
+        )
+
+    return payload
+
+
 def register_user(*, name: str, email: str, password: str, requested_role: str) -> dict[str, Any]:
     """
     This creates a new local-auth user in PostgreSQL and returns an auth response payload.
@@ -106,6 +156,24 @@ def register_user(*, name: str, email: str, password: str, requested_role: str) 
     }
 
 
+def check_email_availability(email: str) -> dict[str, Any]:
+    """
+    This checks whether a local or Google-backed account already exists for the email.
+    """
+
+    normalized_email = email.strip().lower()
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT id FROM users WHERE LOWER(email) = LOWER(%s);", (normalized_email,))
+            existing_user = cursor.fetchone()
+
+    return {
+        "email": normalized_email,
+        "isAvailable": existing_user is None,
+        "message": "Email is available." if existing_user is None else "An account already exists for this email.",
+    }
+
+
 def login_user(*, email: str, password: str, requested_role: str) -> dict[str, Any]:
     """
     This verifies the local-auth credentials and returns a Bearer token response.
@@ -143,6 +211,88 @@ def login_user(*, email: str, password: str, requested_role: str) -> dict[str, A
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Selected role does not match this account.",
         )
+
+    serialized_user = _serialize_user(user_row)
+    token = create_access_token(
+        {
+            "sub": serialized_user["id"],
+            "email": serialized_user["email"],
+            "role": serialized_user["role"],
+        }
+    )
+
+    return {
+        "access_token": token,
+        "user": serialized_user,
+    }
+
+
+def login_with_google(*, credential: str, requested_role: str) -> dict[str, Any]:
+    """
+    This verifies the Google credential, then logs in or creates the matching user in PostgreSQL.
+    """
+
+    google_payload = _verify_google_credential(credential)
+    normalized_email = google_payload["email"].strip().lower()
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, name, email, role, provider, is_active, google_id
+                FROM users
+                WHERE LOWER(email) = LOWER(%s);
+                """,
+                (normalized_email,),
+            )
+            existing_user = _row_to_dict(cursor, cursor.fetchone())
+
+            if existing_user:
+                effective_role = "admin" if existing_user["role"] == "super_admin" else existing_user["role"]
+                if effective_role != requested_role:
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Selected role does not match this account.",
+                    )
+
+                if existing_user["provider"] == "local":
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="This email is registered with password login. Use email and password instead.",
+                    )
+
+                cursor.execute(
+                    """
+                    UPDATE users
+                    SET
+                      name = %s,
+                      google_id = %s,
+                      provider = 'google',
+                      updated_at = NOW()
+                    WHERE id = %s
+                    RETURNING id, name, email, role, provider, is_active;
+                    """,
+                    (google_payload.get("name") or existing_user["name"], google_payload["sub"], existing_user["id"]),
+                )
+                user_row = _row_to_dict(cursor, cursor.fetchone())
+            else:
+                role_to_store = "super_admin" if _count_users(cursor) == 0 else requested_role
+                cursor.execute(
+                    """
+                    INSERT INTO users (name, email, role, provider, google_id, is_active)
+                    VALUES (%s, %s, %s, 'google', %s, TRUE)
+                    RETURNING id, name, email, role, provider, is_active;
+                    """,
+                    (
+                        google_payload.get("name") or normalized_email.split("@")[0],
+                        normalized_email,
+                        role_to_store,
+                        google_payload["sub"],
+                    ),
+                )
+                user_row = _row_to_dict(cursor, cursor.fetchone())
+
+            connection.commit()
 
     serialized_user = _serialize_user(user_row)
     token = create_access_token(

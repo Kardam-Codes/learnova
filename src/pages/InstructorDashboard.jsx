@@ -6,7 +6,11 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import EmptyState from "../components/EmptyState";
+import LoadingBlock from "../components/LoadingBlock";
 import InstructorNavbar from "../components/InstructorNavbar";
+import ShareLinkModal from "../components/ShareLinkModal";
+import StatusBanner from "../components/StatusBanner";
 import { instructorCourses } from "../data/instructorMock";
 import { useAuth } from "../context/AuthContext";
 import { fetchAdminCoursesRequest } from "../utils/apiClient";
@@ -36,25 +40,30 @@ function mapApiCourseToDashboardCourse(course) {
     id: course.slug,
     title: course.title,
     tags: course.tags ?? [],
-    views: 0,
+    views: course.viewsCount ?? 0,
     contents: course.contentCount ?? 0,
-    duration: "-",
+    duration: course.durationLabel ?? "-",
     isPublished: Boolean(course.isPublished),
   };
 }
 
-export default function InstructorDashboard() {
+export default function InstructorDashboard({ theme, toggleTheme }) {
   const { token } = useAuth();
   const [query, setQuery] = useState("");
   const [viewMode, setViewMode] = useState("list");
   const [courses, setCourses] = useState(instructorCourses);
   const [loadError, setLoadError] = useState("");
+  const [statusBanner, setStatusBanner] = useState(null);
+  const [shareCourse, setShareCourse] = useState(null);
+  const [isCopying, setIsCopying] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const normalizedQuery = query.trim().toLowerCase();
 
   useEffect(() => {
     let isMounted = true;
 
     const loadCourses = async () => {
+      setIsLoading(true);
       try {
         const response = await fetchAdminCoursesRequest(token);
         if (!isMounted) {
@@ -70,6 +79,10 @@ export default function InstructorDashboard() {
 
         setCourses(instructorCourses);
         setLoadError(error.message);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
@@ -91,19 +104,43 @@ export default function InstructorDashboard() {
   }, [courses, normalizedQuery]);
 
   const handleShareCourse = async (courseId) => {
-    const shareUrl = `${window.location.origin}/courses/${courseId}`;
+    const course = courses.find((item) => item.id === courseId);
+    if (!course) {
+      return;
+    }
 
+    setShareCourse({
+      title: course.title,
+      url: `${window.location.origin}/courses/${courseId}`,
+    });
+  };
+
+  const handleCopyCourseLink = async () => {
+    if (!shareCourse?.url) {
+      return;
+    }
+
+    setIsCopying(true);
     try {
-      await navigator.clipboard.writeText(shareUrl);
-      window.alert("Course link copied to clipboard.");
+      await navigator.clipboard.writeText(shareCourse.url);
+      setStatusBanner({
+        tone: "success",
+        message: "Course link copied to clipboard.",
+      });
+      setShareCourse(null);
     } catch {
-      window.prompt("Copy this course link", shareUrl);
+      setStatusBanner({
+        tone: "error",
+        message: "Clipboard access failed. You can still copy the link from the share dialog.",
+      });
+    } finally {
+      setIsCopying(false);
     }
   };
 
   return (
     <main className="course-page-shell instructor-page-shell">
-      <InstructorNavbar />
+      <InstructorNavbar theme={theme} toggleTheme={toggleTheme} />
 
       <div className="course-page-card instructor-shell">
         <section className="instructor-board">
@@ -131,18 +168,31 @@ export default function InstructorDashboard() {
             </div>
           </div>
 
+          <StatusBanner
+            tone={statusBanner?.tone}
+            message={statusBanner?.message}
+            onClose={() => setStatusBanner(null)}
+          />
           {loadError ? (
-            <p className="content-empty">
-              Live course data could not be loaded. Showing fallback records.
-            </p>
+            <StatusBanner
+              tone="error"
+              message="Live course data could not be loaded. Showing fallback records."
+              onClose={() => setLoadError("")}
+            />
           ) : null}
 
+          {isLoading ? (
+            <LoadingBlock
+              title="Loading instructor courses"
+              description="Preparing your published, draft, and in-progress course records."
+            />
+          ) : (
           <div
             className={`instructor-course-collection${
               viewMode === "kanban" ? " is-kanban" : ""
             }`}
           >
-            {filteredCourses.map((course) => (
+            {filteredCourses.length ? filteredCourses.map((course) => (
               <article key={course.id} className="instructor-course-item">
                 <div className="course-item-main">
                   <Link
@@ -198,8 +248,14 @@ export default function InstructorDashboard() {
                   <span className="instructor-draft-badge">Draft</span>
                 )}
               </article>
-            ))}
+            )) : (
+              <EmptyState
+                title="No courses found"
+                description="Try another search term or create a new course to start building your catalog."
+              />
+            )}
           </div>
+          )}
 
           <Link
             to="/instructor/courses/new-course/edit"
@@ -213,6 +269,16 @@ export default function InstructorDashboard() {
           </Link>
         </section>
       </div>
+
+      {shareCourse ? (
+        <ShareLinkModal
+          courseTitle={shareCourse.title}
+          courseUrl={shareCourse.url}
+          onClose={() => setShareCourse(null)}
+          onCopy={handleCopyCourseLink}
+          isCopying={isCopying}
+        />
+      ) : null}
     </main>
   );
 }

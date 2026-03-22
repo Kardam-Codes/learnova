@@ -23,7 +23,15 @@ function EyeIcon({ visible }) {
   );
 }
 
-export default function PasswordField({ id, label, value, onChange, placeholder }) {
+export default function PasswordField({
+  id,
+  label,
+  value,
+  onChange,
+  placeholder,
+  helperText = "",
+  errorText = "",
+}) {
   const [visible, setVisible] = useState(false);
 
   return (
@@ -36,11 +44,14 @@ export default function PasswordField({ id, label, value, onChange, placeholder 
           value={value}
           onChange={(event) => onChange(event.target.value)}
           placeholder={placeholder}
+          aria-invalid={Boolean(errorText)}
         />
         <button type="button" className="password-toggle" onClick={() => setVisible((state) => !state)}>
           <EyeIcon visible={visible} />
         </button>
       </div>
+      {errorText ? <small className="field-error-text">{errorText}</small> : null}
+      {!errorText && helperText ? <small className="field-helper-text">{helperText}</small> : null}
     </label>
   );
 }
