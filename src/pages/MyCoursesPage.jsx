@@ -14,6 +14,7 @@ import StatusBanner from "../components/StatusBanner";
 import EmptyState from "../components/EmptyState";
 import LoadingBlock from "../components/LoadingBlock";
 import { useAuth } from "../context/AuthContext";
+import { buildGeneratedCatalogData } from "../data/generatedDemoData";
 import { enrollCourseRequest, fetchCoursesRequest } from "../utils/apiClient";
 
 const EMPTY_PROFILE = {
@@ -22,6 +23,32 @@ const EMPTY_PROFILE = {
   currentBadge: "Newbie",
   badgeTiers: [],
 };
+
+const MIN_VISIBLE_COURSES = 200;
+
+function mergeCatalogData(response, learnerName) {
+  const liveEnrolledCourses = response.enrolledCourses ?? response.courses ?? [];
+  const liveAvailableCourses = response.availableCourses ?? [];
+  const generated = buildGeneratedCatalogData(learnerName);
+  const existingIds = new Set([
+    ...liveEnrolledCourses.map((course) => course.id),
+    ...liveAvailableCourses.map((course) => course.id),
+  ]);
+  const totalLiveCourses = liveEnrolledCourses.length + liveAvailableCourses.length;
+  const fillerNeeded = Math.max(MIN_VISIBLE_COURSES - totalLiveCourses, 0);
+  const generatedAvailableCourses = generated.availableCourses.filter((course) => !existingIds.has(course.id)).slice(0, fillerNeeded);
+
+  return {
+    profile: {
+      ...generated.profile,
+      ...response.profile,
+      learnerName: response.profile?.learnerName || learnerName || EMPTY_PROFILE.learnerName,
+    },
+    courses: liveEnrolledCourses,
+    enrolledCourses: liveEnrolledCourses,
+    availableCourses: [...liveAvailableCourses, ...generatedAvailableCourses],
+  };
+}
 
 export default function MyCoursesPage({ theme, toggleTheme }) {
   const { token, user } = useAuth();
@@ -48,30 +75,14 @@ export default function MyCoursesPage({ theme, toggleTheme }) {
           return;
         }
 
-        setCatalogData({
-          profile: {
-            ...response.profile,
-            learnerName: response.profile.learnerName || user?.name || EMPTY_PROFILE.learnerName,
-          },
-          courses: response.courses ?? response.enrolledCourses ?? [],
-          enrolledCourses: response.enrolledCourses ?? response.courses ?? [],
-          availableCourses: response.availableCourses ?? [],
-        });
+        setCatalogData(mergeCatalogData(response, user?.name || EMPTY_PROFILE.learnerName));
         setLoadError("");
       } catch {
         if (!isMounted) {
           return;
         }
-        setCatalogData({
-          profile: {
-            ...EMPTY_PROFILE,
-            learnerName: user?.name || EMPTY_PROFILE.learnerName,
-          },
-          courses: [],
-          enrolledCourses: [],
-          availableCourses: [],
-        });
-        setLoadError("Live catalog data could not be loaded right now.");
+        setCatalogData(buildGeneratedCatalogData(user?.name || EMPTY_PROFILE.learnerName));
+        setLoadError("Live catalog data could not be loaded right now. Showing generated demo catalog data.");
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -103,15 +114,7 @@ export default function MyCoursesPage({ theme, toggleTheme }) {
     try {
       await enrollCourseRequest(course.id, token);
       const refreshed = await fetchCoursesRequest(token);
-      setCatalogData({
-        profile: {
-          ...refreshed.profile,
-          learnerName: refreshed.profile.learnerName || user?.name || EMPTY_PROFILE.learnerName,
-        },
-        courses: refreshed.courses ?? refreshed.enrolledCourses ?? [],
-        enrolledCourses: refreshed.enrolledCourses ?? refreshed.courses ?? [],
-        availableCourses: refreshed.availableCourses ?? [],
-      });
+      setCatalogData(mergeCatalogData(refreshed, user?.name || EMPTY_PROFILE.learnerName));
       setActionMessage(`You are now enrolled in ${course.title}.`);
       setLoadError("");
     } catch (error) {

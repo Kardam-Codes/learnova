@@ -15,6 +15,7 @@ import StatusBanner from "../components/StatusBanner";
 import LoadingBlock from "../components/LoadingBlock";
 import EmptyState from "../components/EmptyState";
 import { useAuth } from "../context/AuthContext";
+import { getGeneratedCourseDetail } from "../data/generatedDemoData";
 import { enrollCourseRequest, fetchCourseDetailRequest } from "../utils/apiClient";
 
 const EMPTY_COURSE = {
@@ -47,7 +48,7 @@ const EMPTY_COURSE = {
 export default function CourseDetailPage({ theme, toggleTheme }) {
   const { courseId = "odoo-crm" } = useParams();
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [query, setQuery] = useState("");
   const [course, setCourse] = useState(EMPTY_COURSE);
   const [loadError, setLoadError] = useState("");
@@ -67,8 +68,14 @@ export default function CourseDetailPage({ theme, toggleTheme }) {
         }
       } catch (error) {
         if (isMounted) {
-          setCourse(EMPTY_COURSE);
-          setLoadError(error.message || "Live course details could not be loaded.");
+          const generatedCourse = getGeneratedCourseDetail(courseId, user?.name || "Learner");
+          if (generatedCourse) {
+            setCourse(generatedCourse);
+            setLoadError("Live course details could not be loaded. Showing generated demo course data.");
+          } else {
+            setCourse(EMPTY_COURSE);
+            setLoadError(error.message || "Live course details could not be loaded.");
+          }
         }
       } finally {
         if (isMounted) {
@@ -84,7 +91,7 @@ export default function CourseDetailPage({ theme, toggleTheme }) {
     return () => {
       isMounted = false;
     };
-  }, [courseId, token]);
+  }, [courseId, token, user?.name]);
 
   const handleFreeEnrollment = async () => {
     try {

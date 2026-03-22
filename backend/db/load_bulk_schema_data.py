@@ -4,6 +4,7 @@ Generate and optionally execute bulk SQL datasets for the Learnova PostgreSQL sc
 Supported datasets:
 - generic: one synthetic row family per concrete table
 - reporting: 40 courses plus many attendee/progress rows for reporting dashboards
+- full: generic catalog volume plus reporting-focused rows in one SQL payload
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ from uuid import NAMESPACE_URL, uuid5
 ROOT_DIR = Path(__file__).resolve().parents[2]
 GENERIC_OUTPUT_PATH = ROOT_DIR / "backend" / "db" / "bulk_seed_200.sql"
 REPORTING_OUTPUT_PATH = ROOT_DIR / "backend" / "db" / "reporting_seed_40_courses_320_rows.sql"
+FULL_OUTPUT_PATH = ROOT_DIR / "backend" / "db" / "full_seed_200_courses_320_reporting_rows.sql"
 PASSWORD_HASH = (
     "pbkdf2_sha256$600000$3b6b772bdfd7803725e19f6e2315940e$"
     "c65bd22fe46cc6af1b0b342e80e12456ab9384585ad7fe7b939c70c071d91d17"
@@ -298,7 +300,7 @@ SET
                 f"""
 INSERT INTO quiz_attempt_answers (id, attempt_id, question_id, selected_option_id, is_correct)
 VALUES ({sql_text(make_id(f"quiz_attempt_answer:{index}"))}, {sql_text(attempt_id)}, {sql_text(question_id)}, {sql_text(option_id)}, TRUE)
-ON CONFLICT (attempt_id, question_id) DO UPDATE
+ON CONFLICT (attempt_id, question_id, selected_option_id) DO UPDATE
 SET
   selected_option_id = EXCLUDED.selected_option_id,
   is_correct = EXCLUDED.is_correct;
@@ -603,7 +605,7 @@ VALUES (
   {sql_text(correct_option_id)},
   TRUE
 )
-ON CONFLICT (attempt_id, question_id) DO UPDATE
+ON CONFLICT (attempt_id, question_id, selected_option_id) DO UPDATE
 SET
   selected_option_id = EXCLUDED.selected_option_id,
   is_correct = EXCLUDED.is_correct;
@@ -763,7 +765,7 @@ def execute_sql(sql_text_payload: str) -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Generate and optionally execute Learnova bulk schema data.")
-    parser.add_argument("--dataset", choices=("generic", "reporting"), default="generic")
+    parser.add_argument("--dataset", choices=("generic", "reporting", "full"), default="generic")
     parser.add_argument("--count", type=int, default=200, help="Generic dataset size. Ignored for reporting dataset.")
     parser.add_argument("--course-count", type=int, default=40, help="Reporting dataset course count.")
     parser.add_argument("--reporting-rows", type=int, default=320, help="Reporting dataset attendee/progress row target.")
@@ -775,7 +777,31 @@ def parse_args() -> argparse.Namespace:
 def resolve_output_path(args: argparse.Namespace) -> Path:
     if args.output is not None:
         return args.output
-    return REPORTING_OUTPUT_PATH if args.dataset == "reporting" else GENERIC_OUTPUT_PATH
+    if args.dataset == "reporting":
+        return REPORTING_OUTPUT_PATH
+    if args.dataset == "full":
+        return FULL_OUTPUT_PATH
+    return GENERIC_OUTPUT_PATH
+
+
+def _strip_transaction(sql_payload: str) -> str:
+    _, after_begin = sql_payload.split("BEGIN;", 1)
+    before_commit, _ = after_begin.rsplit("COMMIT;", 1)
+    return before_commit.strip()
+
+
+def build_full_sql(count: int, course_count: int, reporting_rows: int) -> str:
+    generic_body = _strip_transaction(build_generic_sql(count))
+    reporting_body = _strip_transaction(build_reporting_sql(course_count, reporting_rows))
+    return "\n\n".join(
+        [
+            "-- Auto-generated full demo seed with 200 courses and 320+ reporting rows",
+            "BEGIN;",
+            generic_body,
+            reporting_body,
+            "COMMIT;",
+        ]
+    ) + "\n"
 
 
 def main() -> None:
@@ -784,6 +810,8 @@ def main() -> None:
 
     if args.dataset == "reporting":
         sql_payload = build_reporting_sql(args.course_count, args.reporting_rows)
+    elif args.dataset == "full":
+        sql_payload = build_full_sql(args.count, args.course_count, args.reporting_rows)
     else:
         sql_payload = build_generic_sql(args.count)
 

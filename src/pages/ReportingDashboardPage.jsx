@@ -9,9 +9,39 @@ import InstructorNavbar from "../components/InstructorNavbar";
 import EmptyState from "../components/EmptyState";
 import LoadingBlock from "../components/LoadingBlock";
 import StatusBanner from "../components/StatusBanner";
-import { reportRows, reportSummary } from "../data/instructorMock";
+import { buildGeneratedReportingData } from "../data/generatedDemoData";
 import { useAuth } from "../context/AuthContext";
 import { fetchAdminCourseProgressReportRequest } from "../utils/apiClient";
+
+const MIN_REPORT_ROWS = 320;
+
+function filterRowsByStatus(rows, activeFilter) {
+  return activeFilter ? rows.filter((row) => row.status === activeFilter) : rows;
+}
+
+function mergeReportingData(response, activeFilter) {
+  const generated = buildGeneratedReportingData(MIN_REPORT_ROWS);
+  const generatedRows = filterRowsByStatus(generated.rows, activeFilter);
+  const liveRows = response.rows ?? [];
+  const fillerNeeded = Math.max(MIN_REPORT_ROWS - liveRows.length, 0);
+  const mergedRows = [
+    ...liveRows,
+    ...generatedRows.slice(0, fillerNeeded).map((row, index) => ({
+      ...row,
+      id: liveRows.length + index + 1,
+    })),
+  ];
+
+  return {
+    summary: [
+      { id: "participants", label: "Total Participants", value: mergedRows.length },
+      { id: "yet-to-start", label: "Yet to Start", value: mergedRows.filter((row) => row.status === "yet_to_start").length },
+      { id: "in-progress", label: "In Progress", value: mergedRows.filter((row) => row.status === "in_progress").length },
+      { id: "completed", label: "Completed", value: mergedRows.filter((row) => row.status === "completed").length },
+    ],
+    rows: mergedRows,
+  };
+}
 
 function SummaryIcon({ kind }) {
   if (kind === "participants") {
@@ -102,8 +132,9 @@ const REPORT_COLUMNS = [
 
 export default function ReportingDashboardPage({ theme, toggleTheme }) {
   const { token } = useAuth();
-  const [summary, setSummary] = useState(reportSummary);
-  const [rows, setRows] = useState(reportRows);
+  const generatedFallback = useMemo(() => buildGeneratedReportingData(MIN_REPORT_ROWS), []);
+  const [summary, setSummary] = useState(generatedFallback.summary);
+  const [rows, setRows] = useState(generatedFallback.rows);
   const [activeFilter, setActiveFilter] = useState("");
   const [loadError, setLoadError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -122,17 +153,24 @@ export default function ReportingDashboardPage({ theme, toggleTheme }) {
           return;
         }
 
-        setSummary(response.summary);
-        setRows(response.rows);
+        const merged = mergeReportingData(response, activeFilter);
+        setSummary(merged.summary);
+        setRows(merged.rows);
         setLoadError("");
       } catch (error) {
         if (!isMounted) {
           return;
         }
 
-        setSummary(reportSummary);
-        setRows(reportRows);
-        setLoadError(error.message);
+        const fallbackRows = filterRowsByStatus(generatedFallback.rows, activeFilter);
+        setSummary([
+          { id: "participants", label: "Total Participants", value: fallbackRows.length },
+          { id: "yet-to-start", label: "Yet to Start", value: fallbackRows.filter((row) => row.status === "yet_to_start").length },
+          { id: "in-progress", label: "In Progress", value: fallbackRows.filter((row) => row.status === "in_progress").length },
+          { id: "completed", label: "Completed", value: fallbackRows.filter((row) => row.status === "completed").length },
+        ]);
+        setRows(fallbackRows);
+        setLoadError(error.message || "Live report data could not be loaded.");
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -147,7 +185,7 @@ export default function ReportingDashboardPage({ theme, toggleTheme }) {
     return () => {
       isMounted = false;
     };
-  }, [activeFilter, token]);
+  }, [activeFilter, generatedFallback.rows, generatedFallback.summary, token]);
 
   const totalRowsLabel = useMemo(() => {
     return rows.length === 1 ? "1 row" : `${rows.length} rows`;
@@ -180,7 +218,7 @@ export default function ReportingDashboardPage({ theme, toggleTheme }) {
 
           <StatusBanner
             tone={loadError ? "error" : "info"}
-            message={loadError ? "Live report data could not be loaded. Showing fallback report data." : ""}
+            message={loadError ? "Live report data could not be loaded. Showing generated demo reporting data." : ""}
             onClose={() => setLoadError("")}
           />
 

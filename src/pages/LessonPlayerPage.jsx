@@ -12,6 +12,7 @@ import EmptyState from "../components/EmptyState";
 import LoadingBlock from "../components/LoadingBlock";
 import StatusBanner from "../components/StatusBanner";
 import { useAuth } from "../context/AuthContext";
+import { getGeneratedCourseDetail } from "../data/generatedDemoData";
 import {
   fetchCourseContentRequest,
   fetchCourseDetailRequest,
@@ -365,7 +366,7 @@ export default function LessonPlayerPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { courseId, contentId, mode, questionIndex } = useParams();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [course, setCourse] = useState({
     id: courseId,
@@ -402,13 +403,19 @@ export default function LessonPlayerPage() {
         }
       } catch (error) {
         if (isMounted) {
-          setCourse({
-            id: courseId,
-            title: "",
-            progress: { completionPercentage: 0 },
-            contentItems: [],
-          });
-          setLoadError(error.message || "Live lesson data could not be loaded.");
+          const generatedCourse = getGeneratedCourseDetail(courseId, user?.name || "Learner");
+          if (generatedCourse) {
+            setCourse(generatedCourse);
+            setLoadError("Live lesson data could not be loaded. Showing generated demo lesson data.");
+          } else {
+            setCourse({
+              id: courseId,
+              title: "",
+              progress: { completionPercentage: 0 },
+              contentItems: [],
+            });
+            setLoadError(error.message || "Live lesson data could not be loaded.");
+          }
         }
       } finally {
         if (isMounted) {
@@ -424,7 +431,7 @@ export default function LessonPlayerPage() {
     return () => {
       isMounted = false;
     };
-  }, [courseId, token]);
+  }, [courseId, token, user?.name]);
 
   useEffect(() => {
     let isMounted = true;
@@ -439,8 +446,15 @@ export default function LessonPlayerPage() {
         }
       } catch (error) {
         if (isMounted) {
-          setContentOverride(null);
-          setContentAccessError(error.message || "This learning content is currently unavailable.");
+          const generatedCourse = getGeneratedCourseDetail(courseId, user?.name || "Learner");
+          const generatedContent = generatedCourse?.contentItems.find((item) => item.id === contentId) ?? null;
+          if (generatedContent) {
+            setContentOverride(generatedContent);
+            setContentAccessError("Live content is unavailable. Showing generated demo content.");
+          } else {
+            setContentOverride(null);
+            setContentAccessError(error.message || "This learning content is currently unavailable.");
+          }
         }
       }
     };
@@ -452,7 +466,7 @@ export default function LessonPlayerPage() {
     return () => {
       isMounted = false;
     };
-  }, [contentId, courseId, token]);
+  }, [contentId, courseId, token, user?.name]);
 
   const contentItem = course.contentItems.find((item) => item.id === contentId) ?? null;
   const resolvedContentItem = contentOverride?.id === contentId
