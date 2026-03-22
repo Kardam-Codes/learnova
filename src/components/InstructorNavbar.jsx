@@ -4,14 +4,20 @@
  * Purpose: Provide one consistent navigation bar for all instructor and organiser pages.
  * What it is: A reusable instructor header with brand, primary navigation, and utility actions.
  */
-import { NavLink, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-const navItems = [
-  { label: "Courses", to: "/instructor/courses" },
-  { label: "Reporting", to: "/instructor/reports" },
-  { label: "Setting", to: "/instructor/courses/odoo-crm/edit" },
-];
+function BrandLogoIcon() {
+  return (
+    <svg viewBox="0 0 64 64" className="brand-logo-icon" aria-hidden="true">
+      <rect width="64" height="64" rx="10" fill="currentColor" opacity="0.12" />
+      <path d="M12 12h12v28h16v12H12Z" fill="currentColor" />
+      <path d="M28 12h24v12H40v16H28Z" fill="currentColor" opacity="0.9" />
+      <path d="M40 24h12v28H24V40h16Z" fill="none" stroke="currentColor" strokeWidth="6" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 function ThemeIcon({ theme }) {
   if (theme === "light") {
@@ -40,15 +46,56 @@ function ThemeIcon({ theme }) {
 }
 
 export default function InstructorNavbar({ theme, toggleTheme }) {
+  const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const displayName = user?.name ?? "Instructor";
+  const [isHidden, setIsHidden] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      const delta = currentScrollY - lastScrollY.current;
+
+      setIsScrolled(currentScrollY > 10);
+
+      if (currentScrollY <= 18) {
+        setIsHidden(false);
+      } else if (delta > 8) {
+        setIsHidden(true);
+      } else if (delta < -6) {
+        setIsHidden(false);
+      }
+
+      lastScrollY.current = currentScrollY;
+    };
+
+    lastScrollY.current = window.scrollY;
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
+  const searchParams = new URLSearchParams(location.search);
+  const courseFromQuery = searchParams.get("course");
+  const courseFromPathMatch = location.pathname.match(/^\/instructor\/courses\/([^/]+)\/edit$/);
+  const activeCourseSlug = courseFromPathMatch?.[1] ?? courseFromQuery ?? "new-course";
+  const navItems = [
+    { label: "Courses", to: "/instructor/courses" },
+    { label: "Reporting", to: "/instructor/reports" },
+    { label: "Setting", to: `/instructor/courses/${activeCourseSlug}/edit` },
+  ];
 
   return (
-    <header className="page-navbar instructor-navbar">
-      <div className="brand-lockup brand-wordmark-link">
+    <header className={`page-navbar instructor-navbar${isHidden ? " is-hidden" : ""}${isScrolled ? " is-scrolled" : ""}`}>
+      <Link className="brand-lockup brand-wordmark-link" to="/instructor/courses">
+        <BrandLogoIcon />
         <h1 className="brand-wordmark">Learnova</h1>
-      </div>
+      </Link>
 
       <nav className="instructor-nav-links" aria-label="Instructor navigation">
         {navItems.map((item) => (
@@ -75,13 +122,10 @@ export default function InstructorNavbar({ theme, toggleTheme }) {
           <ThemeIcon theme={theme} />
         </button>
         <div className="learner-badge instructor-user-badge" aria-label={`Signed in as ${displayName}`}>
-          <div className="learner-copy">
-            <span className="eyebrow">Signed in</span>
-            <strong>{displayName}</strong>
-          </div>
-          <div className="profile-avatar" aria-hidden="true">
-            {displayName.slice(0, 1)}
-          </div>
+          <strong>{displayName}</strong>
+        </div>
+        <div className="profile-avatar" aria-hidden="true">
+          {displayName.slice(0, 1)}
         </div>
         <button
           type="button"

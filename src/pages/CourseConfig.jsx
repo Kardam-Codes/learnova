@@ -17,6 +17,7 @@ import { useAuth } from "../context/AuthContext";
 import {
   addAdminCourseAttendeesRequest,
   createAdminCourseRequest,
+  fetchAdminCoursesRequest,
   fetchAdminCourseAttendeesRequest,
   fetchAdminCourseContentRequest,
   fetchAdminCourseQuizzesRequest,
@@ -28,6 +29,20 @@ import {
 } from "../utils/apiClient";
 
 const tabs = ["Content", "Description", "Options", "Quiz"];
+const TAG_SUGGESTIONS = [
+  "CRM",
+  "Automation",
+  "Sales",
+  "Workflow",
+  "Advanced",
+  "Analytics",
+  "Reports",
+  "Growth",
+  "Operations",
+  "Lead Management",
+  "Pipeline",
+  "Productivity",
+];
 
 const emptyCourse = {
   slug: "new-course",
@@ -55,12 +70,12 @@ function PublishControl({ isPublished, onToggle }) {
         </svg>
       </button>
 
-      <div className="publish-row publish-row-toggle">
+      <button type="button" className="publish-row publish-row-toggle" onClick={onToggle}>
         <span>Share on web</span>
         <span className={`publish-switch${isPublished ? " is-on" : ""}`} aria-hidden="true">
           <span />
         </span>
-      </div>
+      </button>
     </div>
   );
 }
@@ -81,6 +96,13 @@ function mapCourseToFormState(course) {
     responsibleUserId: course.responsibleUserId ?? null,
     tags: course.tags ?? [],
   };
+}
+
+function normalizeLookupValue(value) {
+  return (value ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
 }
 
 export default function CourseConfig({ theme, toggleTheme }) {
@@ -109,11 +131,9 @@ export default function CourseConfig({ theme, toggleTheme }) {
   const [isLoading, setIsLoading] = useState(true);
   const [showRemoveImageDialog, setShowRemoveImageDialog] = useState(false);
   const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
-  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [tagInputValue, setTagInputValue] = useState("");
   const isNewCourse = courseId === "new-course";
-  const thumbnailInputRef = useRef(null);
   const thumbnailFileInputRef = useRef(null);
-  const coverFileInputRef = useRef(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -125,6 +145,7 @@ export default function CourseConfig({ theme, toggleTheme }) {
           ...current,
           ...emptyCourse,
         }));
+        setTagInputValue("");
         setContentItems([]);
         setQuizzes([]);
         setAttendees([]);
@@ -161,7 +182,9 @@ export default function CourseConfig({ theme, toggleTheme }) {
           return;
         }
 
-        setCourseForm(mapCourseToFormState(courseResponse));
+        const nextCourseForm = mapCourseToFormState(courseResponse);
+        setCourseForm(nextCourseForm);
+        setTagInputValue(nextCourseForm.tags.join(", "));
         setContentItems(contentResponse.contentItems);
         setQuizzes(quizResponse.quizzes);
         setAttendees(attendeeResponse.attendees);
@@ -170,6 +193,23 @@ export default function CourseConfig({ theme, toggleTheme }) {
       } catch (error) {
         if (!isMounted) {
           return;
+        }
+
+        if (error.message === "Course not found.") {
+          try {
+            const courseListResponse = await fetchAdminCoursesRequest(token);
+            const fallbackTitle = normalizeLookupValue(fallbackCourse.title);
+            const matchedCourse = courseListResponse.courses.find((course) => {
+              return normalizeLookupValue(course.title) === fallbackTitle;
+            });
+
+            if (matchedCourse && matchedCourse.slug !== courseId) {
+              navigate(`/instructor/courses/${matchedCourse.slug}/edit`, { replace: true });
+              return;
+            }
+          } catch {
+            // Keep the original error handling if slug resolution is unavailable.
+          }
         }
 
         setLoadError(error.message);
@@ -221,6 +261,7 @@ export default function CourseConfig({ theme, toggleTheme }) {
         : await updateAdminCourseRequest(courseId, token, payload);
 
       setCourseForm(mapCourseToFormState(response));
+      setTagInputValue((response.tags ?? []).join(", "));
       setStatusBanner({
         tone: "success",
         message: "Course saved successfully.",
@@ -324,14 +365,13 @@ export default function CourseConfig({ theme, toggleTheme }) {
       return;
     }
 
-    const setUploading = fieldName === "thumbnailUrl" ? setIsUploadingThumbnail : setIsUploadingCover;
-    setUploading(true);
+    setIsUploadingThumbnail(true);
     try {
       const response = await uploadAdminFileRequest(token, file, category);
       updateField(fieldName, response.url);
       setStatusBanner({
         tone: "success",
-        message: `${fieldName === "thumbnailUrl" ? "Course image" : "Cover image"} uploaded successfully.`,
+        message: "Course image uploaded successfully.",
       });
     } catch (error) {
       setStatusBanner({
@@ -339,9 +379,50 @@ export default function CourseConfig({ theme, toggleTheme }) {
         message: error.message,
       });
     } finally {
-      setUploading(false);
+      setIsUploadingThumbnail(false);
     }
   };
+
+  const syncTagsFromInput = (value) => {
+    setTagInputValue(value);
+    updateField(
+      "tags",
+      value
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+    );
+  };
+
+  const handleTagSuggestionSelect = (suggestion) => {
+    const segments = tagInputValue
+      .split(",")
+      .map((segment) => segment.trim());
+
+    if (!segments.length) {
+      syncTagsFromInput(suggestion);
+      return;
+    }
+
+    const nextSegments = [...segments];
+    nextSegments[nextSegments.length - 1] = suggestion;
+    const normalized = nextSegments.filter(Boolean);
+    syncTagsFromInput(`${normalized.join(", ")}${normalized.length ? ", " : ""}`);
+  };
+
+  const selectedTags = courseForm.tags.map((tag) => tag.toLowerCase());
+  const activeTagFragment = tagInputValue.split(",").at(-1)?.trim().toLowerCase() ?? "";
+  const filteredTagSuggestions = TAG_SUGGESTIONS.filter((tag) => {
+    if (selectedTags.includes(tag.toLowerCase())) {
+      return false;
+    }
+
+    if (!activeTagFragment) {
+      return true;
+    }
+
+    return tag.toLowerCase().includes(activeTagFragment);
+  }).slice(0, 6);
 
   return (
     <main className="course-page-shell instructor-page-shell">
@@ -439,21 +520,28 @@ export default function CourseConfig({ theme, toggleTheme }) {
                 />
               </label>
 
-              <label className="instructor-field instructor-field-line">
+              <label className="instructor-field instructor-field-line instructor-tag-field">
                 <span>Tags:</span>
                 <input
                   type="text"
-                  value={courseForm.tags.join(", ")}
-                  onChange={(event) =>
-                    updateField(
-                      "tags",
-                      event.target.value
-                        .split(",")
-                        .map((tag) => tag.trim())
-                        .filter(Boolean),
-                    )
-                  }
+                  value={tagInputValue}
+                  onChange={(event) => syncTagsFromInput(event.target.value)}
+                  placeholder="Type tags separated by commas"
                 />
+                {filteredTagSuggestions.length ? (
+                  <div className="tag-suggestion-row" aria-label="Suggested tags">
+                    {filteredTagSuggestions.map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        className="tag-suggestion-chip"
+                        onClick={() => handleTagSuggestionSelect(tag)}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
               </label>
             </div>
 
@@ -479,13 +567,21 @@ export default function CourseConfig({ theme, toggleTheme }) {
                 </button>
               </div>
               <strong>Course image</strong>
-              <input
-                ref={thumbnailInputRef}
-                type="text"
-                value={courseForm.thumbnailUrl}
-                onChange={(event) => updateField("thumbnailUrl", event.target.value)}
-                placeholder="Thumbnail URL"
-              />
+              {courseForm.thumbnailUrl ? (
+                <div className="course-image-preview-shell">
+                  <img src={courseForm.thumbnailUrl} alt="Course thumbnail preview" className="course-image-preview" />
+                </div>
+              ) : (
+                <div className="course-image-empty-state">No course image uploaded yet.</div>
+              )}
+              <button
+                type="button"
+                className="catalog-action-button instructor-ghost-button"
+                onClick={() => thumbnailFileInputRef.current?.click()}
+                disabled={isUploadingThumbnail}
+              >
+                {isUploadingThumbnail ? "Uploading Course Image..." : "Upload Course Image"}
+              </button>
               <input
                 ref={thumbnailFileInputRef}
                 type="file"
@@ -496,32 +592,6 @@ export default function CourseConfig({ theme, toggleTheme }) {
                     event.target.files?.[0],
                     "thumbnailUrl",
                     "course-images",
-                  )}
-              />
-              <input
-                type="text"
-                value={courseForm.coverImageUrl}
-                onChange={(event) => updateField("coverImageUrl", event.target.value)}
-                placeholder="Cover image URL"
-              />
-              <button
-                type="button"
-                className="catalog-action-button instructor-ghost-button"
-                onClick={() => coverFileInputRef.current?.click()}
-                disabled={isUploadingCover}
-              >
-                {isUploadingCover ? "Uploading Cover..." : "Upload Cover Image"}
-              </button>
-              <input
-                ref={coverFileInputRef}
-                type="file"
-                hidden
-                accept="image/*"
-                onChange={(event) =>
-                  handleUploadCourseImage(
-                    event.target.files?.[0],
-                    "coverImageUrl",
-                    "course-covers",
                   )}
               />
             </aside>

@@ -374,8 +374,8 @@ def _serialize_course(cursor, course_slug: str) -> dict[str, Any]:
               CASE
                 WHEN duration_label ~* '[0-9]+' THEN
                   CASE
-                    WHEN duration_label ILIKE '%question%' THEN CAST(regexp_replace(duration_label, '[^0-9]', '', 'g') AS INTEGER) * 2
-                    WHEN duration_label ILIKE '%hour%' THEN CAST(regexp_replace(duration_label, '[^0-9]', '', 'g') AS INTEGER) * 60
+                    WHEN duration_label ILIKE '%%question%%' THEN CAST(regexp_replace(duration_label, '[^0-9]', '', 'g') AS INTEGER) * 2
+                    WHEN duration_label ILIKE '%%hour%%' THEN CAST(regexp_replace(duration_label, '[^0-9]', '', 'g') AS INTEGER) * 60
                     ELSE CAST(regexp_replace(duration_label, '[^0-9]', '', 'g') AS INTEGER)
                   END
                 ELSE 0

@@ -35,6 +35,7 @@ function buildQuestion(prompt = "Write your question here") {
       buildQuestionChoice("Answer 1", true),
       buildQuestionChoice("Answer 2", false),
       buildQuestionChoice("Answer 3", false),
+      buildQuestionChoice("Answer 4", false),
     ],
   };
 }
@@ -64,18 +65,24 @@ function QuestionEditor({
   onPromptChange,
   onChoiceLabelChange,
   onChoiceCorrectChange,
+  onDeleteChoice,
   onAddChoice,
 }) {
   return (
     <>
+      <div className="quiz-editor-eyebrow">Question editor</div>
       <div className="quiz-editor-heading quiz-editor-heading-annotated">
         <strong>{questionIndex + 1}.</strong>
         <input
           type="text"
+          className="quiz-prompt-input"
           value={question.prompt}
           onChange={(event) => onPromptChange(event.target.value)}
         />
       </div>
+      <p className="quiz-editor-helper">
+        Keep the prompt concise and make the choices clearly distinguishable for learners.
+      </p>
 
       <div className="quiz-choice-header quiz-choice-header-annotated">
         <span>Choices</span>
@@ -83,19 +90,32 @@ function QuestionEditor({
       </div>
 
       <div className="quiz-choice-list quiz-choice-list-annotated">
-        {question.choices.map((choice) => (
-          <label key={choice.id} className="quiz-choice-row quiz-choice-row-annotated">
-            <input
-              type="text"
-              value={choice.label}
-              onChange={(event) => onChoiceLabelChange(choice.id, event.target.value)}
-            />
-            <input
-              type="checkbox"
-              checked={choice.isCorrect}
-              onChange={(event) => onChoiceCorrectChange(choice.id, event.target.checked)}
-            />
-          </label>
+        {question.choices.map((choice, choiceIndex) => (
+          <div key={choice.id} className="quiz-choice-row quiz-choice-row-annotated">
+            <div className="quiz-choice-copy">
+              <span className="quiz-choice-index">Choice {choiceIndex + 1}</span>
+              <input
+                type="text"
+                value={choice.label}
+                onChange={(event) => onChoiceLabelChange(choice.id, event.target.value)}
+              />
+            </div>
+            <div className="quiz-choice-actions">
+              <input
+                type="checkbox"
+                checked={choice.isCorrect}
+                onChange={(event) => onChoiceCorrectChange(choice.id, event.target.checked)}
+              />
+              <button
+                type="button"
+                className="quiz-choice-delete-button"
+                onClick={() => onDeleteChoice(choice.id)}
+                disabled={question.choices.length <= 2}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
         ))}
       </div>
 
@@ -110,6 +130,9 @@ function RewardsEditor({ rewards, maxAttempts, onRewardChange, onMaxAttemptsChan
   return (
     <div className="quiz-rewards-panel quiz-rewards-panel-annotated quiz-rewards-panel-compact">
       <h2>Rewards</h2>
+      <p className="quiz-editor-helper">
+        Learners earn fewer points with later attempts, so use this section to reinforce mastery on the first try.
+      </p>
       <label className="reward-line reward-line-annotated reward-line-long-label">
         <span>Maximum attempts :</span>
         <input
@@ -357,6 +380,17 @@ export default function QuizBuilderPage({ theme, toggleTheme }) {
     }
   };
 
+  const handleDeleteChoice = (choiceId) => {
+    if (!selectedQuestion || selectedQuestion.choices.length <= 2) {
+      return;
+    }
+
+    updateQuestion(selectedQuestion.id, (question) => ({
+      ...question,
+      choices: question.choices.filter((choice) => choice.id !== choiceId),
+    }));
+  };
+
   return (
     <main className="course-page-shell instructor-page-shell">
       <InstructorNavbar theme={theme} toggleTheme={toggleTheme} />
@@ -364,13 +398,31 @@ export default function QuizBuilderPage({ theme, toggleTheme }) {
       <div className="course-page-card instructor-shell">
         <section className="quiz-builder-shell quiz-builder-shell-annotated">
           <aside className="quiz-builder-sidebar quiz-builder-sidebar-annotated">
-            <div className="inline-button-row instructor-top-right">
-              <Link
-                to={`/instructor/courses/${quiz.courseSlug || courseSlug}/edit`}
-                className="catalog-action-button instructor-ghost-button"
-              >
-                Back to Course
-              </Link>
+            <div className="quiz-builder-sidebar-header">
+              <div className="quiz-builder-sidebar-topline">
+                <Link
+                  to={`/instructor/courses/${quiz.courseSlug || courseSlug}/edit`}
+                  className="quiz-builder-back-link"
+                  aria-label="Back to course"
+                >
+                  <svg viewBox="0 0 24 24" className="inline-icon" aria-hidden="true">
+                    <path d="M14.5 5 7.5 12l7 7" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M8.5 12h9" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                  </svg>
+                </Link>
+                <span className="eyebrow">Quiz Builder</span>
+              </div>
+              <h2>Structure the assessment</h2>
+            </div>
+            <div className="quiz-builder-stats">
+              <span className="quiz-builder-stat">
+                <strong>{quiz.questions.length}</strong>
+                <span>Questions</span>
+              </span>
+              <span className="quiz-builder-stat">
+                <strong>{quiz.maxAttempts}</strong>
+                <span>Attempts</span>
+              </span>
             </div>
 
             <label className="editor-line-field editor-line-field-wide">
@@ -391,6 +443,7 @@ export default function QuizBuilderPage({ theme, toggleTheme }) {
               <span>Description:</span>
               <input
                 type="text"
+                className="quiz-description-input"
                 value={quiz.description}
                 onChange={(event) =>
                   setQuiz((current) => ({
@@ -400,6 +453,7 @@ export default function QuizBuilderPage({ theme, toggleTheme }) {
                 }
               />
             </label>
+            <p className="quiz-sidebar-helper">This description is shown to learners before they begin the quiz.</p>
 
             <h2>Question List</h2>
 
@@ -418,7 +472,8 @@ export default function QuizBuilderPage({ theme, toggleTheme }) {
                     setPanelMode("question");
                   }}
                 >
-                  Question {index + 1}
+                  <span>Question {index + 1}</span>
+                  <small>{question.choices.length} choices</small>
                 </button>
               ))}
             </div>
@@ -439,6 +494,10 @@ export default function QuizBuilderPage({ theme, toggleTheme }) {
           </aside>
 
           <section className="quiz-builder-panel quiz-builder-panel-annotated">
+            <div className="quiz-builder-panel-header">
+              <span className="eyebrow">{panelMode === "rewards" ? "Rewards" : "Question Workspace"}</span>
+              <h2>{panelMode === "rewards" ? "Tune scoring by attempt" : `Editing ${selectedQuestion ? `Question ${selectedQuestionIndex + 1}` : "Question"}`}</h2>
+            </div>
             <div className="inline-button-row instructor-top-right">
               <button
                 type="button"
@@ -502,6 +561,7 @@ export default function QuizBuilderPage({ theme, toggleTheme }) {
                     ),
                   }))
                 }
+                onDeleteChoice={handleDeleteChoice}
                 onAddChoice={handleAddChoice}
               />
             ) : null}
