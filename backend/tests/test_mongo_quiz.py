@@ -196,6 +196,36 @@ def submit(courses, learner, quiz, *, key=None, answers=None):
         answers_for(quiz) if answers is None else answers, submission_key=key)
 
 
+@pytest.mark.parametrize("problem", ["empty", "no_options", "one_option", "blank_prompt",
+                                      "blank_option", "no_correct_option", "partial_definition"])
+def test_unready_quiz_rejected_without_mutating_draft_or_learning_state(quiz_ready, learner_http, database, problem):
+    questions = deepcopy(quiz_ready["questions"])
+    if problem == "empty": questions = []
+    elif problem == "no_options": questions[0]["options"] = []
+    elif problem == "one_option": questions[0]["options"] = questions[0]["options"][:1]
+    elif problem == "blank_prompt": questions[0]["question_text"] = "   "
+    elif problem == "blank_option": questions[0]["options"][0]["option_text"] = "   "
+    elif problem == "no_correct_option":
+        for option in questions[0]["options"]: option["is_correct"] = False
+    else:
+        draft = deepcopy(questions[0])
+        draft.update(id=str(uuid4()), display_order=2, options=[])
+        questions.append(draft)
+    database.quizzes.update_one({"_id": quiz_ready["_id"]}, {"$set": {"questions": questions}})
+    before = snapshot(database)
+    # Empty answers also ensure an empty quiz cannot earn rewards. For the mixed
+    # definition, submit only the ready question that SQL's inner join would expose.
+    answers = answers_for(quiz_ready) if problem == "partial_definition" else []
+    response = learner_http.post("/courses/demo-open/quizzes/demo-quiz/attempts", json={"answers": answers})
+    assert response.status_code == 409
+    assert response.json()["detail"] == "This quiz is not ready for submission. Please contact your instructor."
+    assert snapshot(database) == before
+    # Completing the definition makes it submittable without any cleanup/import.
+    database.quizzes.update_one({"_id": quiz_ready["_id"]}, {"$set": {"questions": quiz_ready["questions"]}})
+    response = learner_http.post("/courses/demo-open/quizzes/demo-quiz/attempts", json={"answers": answers_for(quiz_ready)})
+    assert response.status_code == 200 and response.json()["attemptNumber"] == 1
+
+
 def test_quiz_submission_api_commits_all_side_effects(quiz_ready, learner_http, database):
     response = learner_http.post("/courses/demo-open/quizzes/demo-quiz/attempts", json={"answers": answers_for(quiz_ready)})
     assert response.status_code == 200
@@ -216,6 +246,56 @@ def test_quiz_submission_api_commits_all_side_effects(quiz_ready, learner_http, 
     assert summary["completion_percentage"] == 100.0 and summary["completed_count"] == 4
     assert summary["status"] == "completed" and summary["current_content_id"] == fixture_id("content-quiz")
     assert learner_http.get("/courses").json()["profile"]["totalPoints"] == 10
+
+
+def test_optional_http_key_replays_original_receipt_and_rejects_changed_payload(quiz_ready, learner_http, database):
+    path = "/courses/demo-open/quizzes/demo-quiz/attempts"
+    first = learner_http.post(path, json={"answers": answers_for(quiz_ready)}, headers={"Idempotency-Key": "first"})
+    assert first.status_code == 200
+    second = learner_http.post(path, json={"answers": answers_for(quiz_ready)}, headers={"Idempotency-Key": "second"})
+    assert second.status_code == 200 and second.json()["attemptNumber"] == 2
+    before = snapshot(database)
+    replay = learner_http.post(path, json={"answers": answers_for(quiz_ready)}, headers={"Idempotency-Key": "first"})
+    assert replay.status_code == 200 and replay.json() == first.json()
+    conflict = learner_http.post(path, json={"answers": answers_for(quiz_ready, 1)}, headers={"Idempotency-Key": "first"})
+    assert conflict.status_code == 409 and snapshot(database) == before
+    assert database.quiz_attempts.count_documents({}) == database.point_events.count_documents({}) == 2
+
+
+@pytest.mark.parametrize("key", ["", "space key", "x" * 129])
+def test_invalid_http_key_creates_no_attempt(quiz_ready, learner_http, database, key):
+    before = snapshot(database)
+    response = learner_http.post("/courses/demo-open/quizzes/demo-quiz/attempts",
+        json={"answers": answers_for(quiz_ready)}, headers={"Idempotency-Key": key})
+    assert response.status_code == 422 and snapshot(database) == before
+
+
+def test_quiz_retry_capability_and_cors(learner_http, monkeypatch):
+    assert learner_http.get("/courses/quiz-submissions/capabilities").json() == {"idempotencyKeySupported": True}
+    preflight = learner_http.options("/courses/demo-open/quizzes/demo-quiz/attempts", headers={
+        "Origin": "http://localhost:5173", "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "authorization,content-type,idempotency-key"})
+    assert preflight.status_code == 200
+    assert "idempotency-key" in preflight.headers["access-control-allow-headers"].lower()
+    monkeypatch.setattr(learner_http.app.state, "courses_storage", "postgres")
+    assert learner_http.get("/courses/quiz-submissions/capabilities").json() == {"idempotencyKeySupported": False}
+
+
+def test_postgres_mode_does_not_silently_ignore_retry_key(learner_http, monkeypatch):
+    from backend.modules.courses.storage import get_course_service
+    class LegacyCourses:
+        def submit_quiz_attempt(self, *args):
+            return {"legacy": True}
+    monkeypatch.setattr(learner_http.app.state, "courses_storage", "postgres")
+    learner_http.app.dependency_overrides[get_course_service] = lambda: LegacyCourses()
+    try:
+        path = "/courses/demo-open/quizzes/demo-quiz/attempts"
+        response = learner_http.post(path, json={"answers": []}, headers={"Idempotency-Key": "retry"})
+        assert response.status_code == 409
+        response = learner_http.post(path, json={"answers": []})
+        assert response.status_code == 200 and response.json() == {"legacy": True}
+    finally:
+        learner_http.app.dependency_overrides.pop(get_course_service, None)
 
 
 def test_wrong_answer_still_receives_configured_reward_and_completes(quiz_ready, courses, database, learner):

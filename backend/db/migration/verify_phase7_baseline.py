@@ -2,7 +2,6 @@
 import os
 import re
 
-from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from backend.config.security import create_access_token
@@ -11,7 +10,6 @@ from backend.db.migration.verify_phase6_baseline import exercise_writes as exerc
 from backend.db.mongo.quiz_schema import upgrade_quiz_receipts
 from backend.main import app
 from backend.modules.courses.mongo_quiz import badge_for_points
-from backend.modules.courses.mongo_service import MongoCourseService
 
 
 def snapshot(database):
@@ -55,7 +53,6 @@ def exercise_writes(database, source):
     original_attempt_ids = {row["_id"] for row in before["quiz_attempts"]}
     original_event_ids = {row["_id"] for row in before["point_events"]}
     token = create_access_token({"sub": user_id, "email": user["email"], "role": user["role"]})
-    service = MongoCourseService(database)
     with TestClient(app) as client:
         if app.state.courses_storage != "mongo" or app.state.mongo_settings.database != database.name:
             raise RuntimeError("The quiz rehearsal app is not using the disposable target.")
@@ -63,24 +60,25 @@ def exercise_writes(database, source):
         for lesson in prior_lessons:
             response = client.post(f"/courses/{course['slug']}/content/{lesson['slug']}/progress", json={"status": "completed", "lastPosition": 100})
             if response.status_code != 200: raise RuntimeError("Could not complete the imported quiz's prerequisites.")
-        first = service.submit_quiz_attempt(course["slug"], content["slug"], user, answers, submission_key="phase7-source-first")
+        attempt_path = f"/courses/{course['slug']}/quizzes/{content['slug']}/attempts"
+        response = client.post(attempt_path, json={"answers": answers}, headers={"Idempotency-Key": "phase7-source-first"})
+        if response.status_code != 200: raise RuntimeError("Imported user's keyed HTTP submission failed.")
+        first = response.json()
         results = [first]
         if remaining >= 2:
-            response = client.post(f"/courses/{course['slug']}/quizzes/{content['slug']}/attempts", json={"answers": answers})
+            response = client.post(attempt_path, json={"answers": answers}, headers={"Idempotency-Key": "phase7-source-second"})
             if response.status_code != 200: raise RuntimeError("Imported user's second quiz submission failed.")
             results.append(response.json())
         replay_before = snapshot(database)
-        if service.submit_quiz_attempt(course["slug"], content["slug"], user, list(reversed(answers)),
-                                       submission_key="phase7-source-first") != first:
+        replay = client.post(attempt_path, json={"answers": list(reversed(answers))},
+                             headers={"Idempotency-Key": "phase7-source-first"})
+        if replay.status_code != 200 or replay.json() != first:
             raise RuntimeError("A keyed retry did not return its original result.")
         if snapshot(database) != replay_before: raise RuntimeError("A keyed retry mutated quiz/reward data.")
         modified = [{**answer, "selectedOptionIndexes": list(answer["selectedOptionIndexes"])} for answer in answers]
         modified[0]["selectedOptionIndexes"] = [999999]
-        try:
-            service.submit_quiz_attempt(course["slug"], content["slug"], user, modified, submission_key="phase7-source-first")
-        except HTTPException as error:
-            if error.status_code != 409: raise RuntimeError("Key reuse returned an unexpected status.") from None
-        else: raise RuntimeError("Key reuse with changed answers was accepted.")
+        conflict = client.post(attempt_path, json={"answers": modified}, headers={"Idempotency-Key": "phase7-source-first"})
+        if conflict.status_code != 409: raise RuntimeError("Key reuse with changed answers was not rejected with 409.")
         if snapshot(database) != replay_before: raise RuntimeError("Rejected key reuse mutated data.")
         detail = client.get(f"/courses/{course['slug']}")
         player = client.get(f"/courses/{course['slug']}/quizzes/{content['slug']}")
@@ -138,11 +136,11 @@ def exercise_writes(database, source):
             original = [{key: value for key, value in row.items() if not (row["_id"] == course_id and key == "updated_at")} for row in original]
             actual = [{key: value for key, value in row.items() if not (row["_id"] == course_id and key == "updated_at")} for row in actual]
         if actual != original: raise RuntimeError("Quiz rehearsal changed unrelated records: " + name)
-    return {"phase6": prior_phase, "quiz_submissions_exercised": len(results), "keyed_service_replays_exercised": 1,
+    return {"phase6": prior_phase, "quiz_submissions_exercised": len(results), "keyed_http_replays_exercised": 1,
         "key_reuse_conflict_verified": True, "new_rewards_linked_one_to_one": True,
         "imported_balance_and_access_preserved": True, "untargeted_records_unchanged": True,
         "source_historical_attempt_count": len(source["quiz_attempts"]), "post_write_learner_reads_verified": 3,
-        "postgres_write_baseline_exercised": False, "http_retry_header_integration_pending": True}
+        "postgres_write_baseline_exercised": False, "http_retry_header_integration_pending": False}
 
 
 if __name__ == "__main__":

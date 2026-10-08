@@ -16,6 +16,7 @@ import LoadingBlock from "../components/LoadingBlock";
 import { useAuth } from "../context/AuthContext";
 import { buildGeneratedCatalogData } from "../data/generatedDemoData";
 import { enrollCourseRequest, fetchCoursesRequest } from "../utils/apiClient";
+import { DEMO_MODE } from "../utils/demoMode";
 
 const EMPTY_PROFILE = {
   learnerName: "Learner",
@@ -82,7 +83,7 @@ export default function MyCoursesPage({ theme, toggleTheme }) {
           return;
         }
         setCatalogData(buildGeneratedCatalogData(user?.name || EMPTY_PROFILE.learnerName));
-        setLoadError("Live catalog data could not be loaded right now. Showing generated demo catalog data.");
+        setLoadError(DEMO_MODE ? "Live catalog data could not be loaded. Showing demo data." : "Live catalog data could not be loaded. Please retry.");
       } finally {
         if (isMounted) {
           setIsLoading(false);

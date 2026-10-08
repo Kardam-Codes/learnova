@@ -406,7 +406,7 @@ def test_admin_invited_mongo_only_account_can_read_and_enroll(learner_http, data
 def test_later_phase_writes_are_explicitly_unavailable(learner_http, monkeypatch, path, payload):
     def fail(): raise AssertionError("MongoDB mode must never write to PostgreSQL")
     monkeypatch.setattr("backend.modules.courses.service.connect", fail)
-    assert learner_http.post(path, json=payload).status_code == 501
+    assert learner_http.post(path, json=payload).status_code == 503
 
 
 def test_mongo_learner_routes_never_open_postgres(learner_http, monkeypatch):

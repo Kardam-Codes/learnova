@@ -5,11 +5,13 @@
  * What it is: A Razorpay-backed payment page that creates orders, launches checkout, and verifies successful payments.
  */
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPaymentVerificationStore } from "../utils/paymentVerification";
 import Navbar from "../components/Navbar";
 import StatusBanner from "../components/StatusBanner";
 import LoadingBlock from "../components/LoadingBlock";
 import {
+  API_BASE_URL,
   createCoursePaymentOrderRequest,
   fetchCourseDetailRequest,
   verifyCoursePaymentRequest,
@@ -51,6 +53,30 @@ export default function PaymentFlowPage({ theme, toggleTheme }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [pendingPayment, setPendingPayment] = useState(null);
+  const pendingRef = useRef(null);
+  const busy = useRef(null);
+  const verificationStore = useMemo(() => createPaymentVerificationStore({
+    getItem: (key) => window.sessionStorage.getItem(key),
+    setItem: (key, value) => window.sessionStorage.setItem(key, value),
+    removeItem: (key) => window.sessionStorage.removeItem(key),
+  }, [API_BASE_URL, user?.id, courseId]), [user?.id, courseId]);
+  const activeStore = useRef(verificationStore);
+  activeStore.current = verificationStore;
+
+  useEffect(() => {
+    busy.current = null;
+    setIsProcessing(false);
+    pendingRef.current = null;
+    setPendingPayment(null);
+    try {
+      const pending = verificationStore.read();
+      pendingRef.current = pending;
+      setPendingPayment(pending);
+    } catch {
+      setError("Saved payment confirmation could not be loaded. Check browser storage before starting checkout.");
+    }
+  }, [verificationStore]);
 
   useEffect(() => {
     let isMounted = true;
@@ -84,14 +110,66 @@ export default function PaymentFlowPage({ theme, toggleTheme }) {
     };
   }, [courseId, token]);
 
+  const confirmPayment = async (payload) => {
+    if (activeStore.current !== verificationStore || busy.current === "verification") return;
+    if (pendingRef.current && JSON.stringify(pendingRef.current) !== JSON.stringify(payload)) {
+      setError("Confirm your pending payment before starting another checkout.");
+      return;
+    }
+    busy.current = "verification";
+    pendingRef.current = payload;
+    setPendingPayment(payload);
+    setIsProcessing(true);
+    setError("");
+    try {
+      // The payment already happened at the provider. If storage is unavailable,
+      // still try confirmation and retain the callback in memory for a local retry.
+      try { verificationStore.save(payload); } catch {
+        setError("Browser storage is unavailable. Keep this page open until payment confirmation succeeds.");
+      }
+      const updatedCourse = await verifyCoursePaymentRequest(courseId, token, payload);
+      if (activeStore.current !== verificationStore) return;
+      if (!updatedCourse?.isEnrolled) throw new Error("Payment confirmation did not unlock the course. Please contact support.");
+      try { verificationStore.clear(); } catch { /* Replaying a confirmed callback is safe. */ }
+      pendingRef.current = null;
+      setPendingPayment(null);
+      setCourse(updatedCourse);
+      setMessage("Payment confirmed. The course is now unlocked for you.");
+      navigate(`/courses/${courseId}`);
+    } catch (verifyError) {
+      if (activeStore.current === verificationStore) {
+        setError((verifyError.message || "Payment confirmation could not be completed.") + " Retry confirmation before paying again.");
+      }
+    } finally {
+      if (activeStore.current === verificationStore) {
+        busy.current = null;
+        setIsProcessing(false);
+      }
+    }
+  };
+
   const handleCheckout = async () => {
+    if (busy.current || pendingRef.current) return;
+    // Detect unavailable storage before opening a payable checkout where possible.
+    try {
+      verificationStore.read();
+      const probe = "learnova-payment-storage-check";
+      window.sessionStorage.setItem(probe, "1");
+      window.sessionStorage.removeItem(probe);
+    } catch {
+      setError("Browser storage is unavailable. Enable it before starting checkout.");
+      return;
+    }
+    busy.current = "checkout";
     setIsProcessing(true);
     setError("");
     setMessage("");
+    let opened = false;
 
     try {
       const RazorpayCheckout = await loadRazorpayCheckout();
       const order = await createCoursePaymentOrderRequest(courseId, token);
+      if (activeStore.current !== verificationStore) return;
 
       if (order.alreadyPaid) {
         setMessage("This course is already paid and ready to start.");
@@ -116,31 +194,30 @@ export default function PaymentFlowPage({ theme, toggleTheme }) {
         theme: {
           color: "#2563EB",
         },
-        handler: async (response) => {
-          try {
-            await verifyCoursePaymentRequest(courseId, token, {
+        handler: (response) => confirmPayment({
               razorpayOrderId: response.razorpay_order_id,
               razorpayPaymentId: response.razorpay_payment_id,
               razorpaySignature: response.razorpay_signature,
-            });
-            setMessage("Payment successful. The course is now unlocked for you.");
-            navigate(`/courses/${courseId}`);
-          } catch (verifyError) {
-            setError(verifyError.message || "Payment was captured but verification failed.");
-          }
-        },
+            }),
         modal: {
           ondismiss: () => {
-            setIsProcessing(false);
+            if (activeStore.current === verificationStore && busy.current === "checkout") {
+              busy.current = null;
+              setIsProcessing(false);
+            }
           },
         },
       });
 
       razorpay.open();
+      opened = true;
     } catch (checkoutError) {
-      setError(checkoutError.message || "Checkout could not be started.");
+      if (activeStore.current === verificationStore) setError(checkoutError.message || "Checkout could not be started.");
     } finally {
-      setIsProcessing(false);
+      if (!opened && activeStore.current === verificationStore) {
+        busy.current = null;
+        setIsProcessing(false);
+      }
     }
   };
 
@@ -156,6 +233,15 @@ export default function PaymentFlowPage({ theme, toggleTheme }) {
       <div className="course-page-card reviews-shell">
         <StatusBanner tone="success" message={message} onClose={() => setMessage("")} />
         <StatusBanner tone="error" message={error} onClose={() => setError("")} />
+        {pendingPayment ? (
+          <section>
+            <p>Your payment confirmation is pending. Retry it before starting another checkout.</p>
+            <button type="button" className="catalog-action-button" disabled={isProcessing}
+              onClick={() => confirmPayment(pendingPayment)}>
+              {isProcessing ? "Confirming payment..." : "Retry payment confirmation"}
+            </button>
+          </section>
+        ) : null}
         <div className="reviews-header">
           <div>
             <span className="eyebrow">Payment Flow</span>
@@ -185,7 +271,7 @@ export default function PaymentFlowPage({ theme, toggleTheme }) {
                 type="button"
                 className="catalog-action-button is-buy"
                 onClick={handleCheckout}
-                disabled={isProcessing}
+                disabled={isProcessing || Boolean(pendingPayment)}
               >
                 {isProcessing ? "Opening Checkout..." : "Pay with Razorpay"}
               </button>

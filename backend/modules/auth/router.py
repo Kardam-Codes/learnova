@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from backend.config.mongo import check_mongo_readiness
-from psycopg import Error as PostgresError
 from pydantic import EmailStr
 
 from backend.modules.auth.dependencies import get_current_token_payload
@@ -37,6 +36,9 @@ def db_health(request: Request):
     This route confirms that PostgreSQL is reachable from the backend layer.
     """
 
+    if getattr(request.app.state, "auth_storage", "postgres") == "mongo":
+        return {"status": "ok", "database": "mongodb", "mongodb": check_mongo_readiness(request)}
+    from psycopg import Error as PostgresError
     try:
         result = check_database_health()
     except PostgresError:

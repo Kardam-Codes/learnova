@@ -22,7 +22,7 @@ from backend.modules.admin.schemas import (
     CourseUpdateRequest,
     PublishCourseRequest,
 )
-from backend.modules.admin.service import get_reporting_course_progress, save_admin_upload
+from backend.modules.admin.service import save_admin_upload
 from backend.modules.auth.dependencies import require_roles
 
 
@@ -36,12 +36,13 @@ AdminOrInstructor = require_roles("admin", "instructor")
 def get_course_progress_report(
     status: str | None = None,
     _current_user: dict = Depends(AdminOrInstructor),
+    admin=Depends(get_admin_service),
 ):
     """
     This returns reporting summary cards and course-wise learner progress rows.
     """
 
-    return get_reporting_course_progress(status)
+    return admin.get_reporting_course_progress(status)
 
 
 @router.get("/users")

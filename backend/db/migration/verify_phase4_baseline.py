@@ -23,9 +23,10 @@ def canonical_response(value):
         return [canonical_response(item) for item in value]
     if isinstance(value, dict):
         result = {key: canonical_response(item) for key, item in value.items()}
-        if isinstance(result.get("enrolledAt"), str):
-            date = datetime.fromisoformat(result["enrolledAt"]).astimezone(timezone.utc)
-            result["enrolledAt"] = date.replace(microsecond=date.microsecond // 1000 * 1000).isoformat()
+        for key in ("enrolledAt", "enrolledDate", "startDate", "completedDate"):
+            if isinstance(result.get(key), str):
+                date = datetime.fromisoformat(result[key]).astimezone(timezone.utc)
+                result[key] = date.replace(microsecond=date.microsecond // 1000 * 1000).isoformat()
         return result
     return value
 
@@ -39,6 +40,11 @@ def compare_checks(before, after):
             raise RuntimeError("API operation/status differs: " + current["path"])
         body = deepcopy(current["response"])
         if current["path"] == "/db/health":
+            if body.get("database") == "mongodb":
+                if body.get("status") != "ok" or body.get("mongodb", {}).get("status") != "ok":
+                    raise RuntimeError("MongoDB readiness failed.")
+                # Phase 11 intentionally replaces PostgreSQL database/user metadata.
+                continue
             body.pop("mongodb", None)
         if body != original["response"]:
             normalized_dates += 1
@@ -52,6 +58,11 @@ def verify_contract():
     current = deepcopy(app.openapi())
     for contract in (current, previous):
         contract["paths"]["/auth/login"]["post"].pop("description", None)
+    quiz_operation = current["paths"]["/courses/{course_slug}/quizzes/{content_slug}/attempts"]["post"]
+    headers = [p for p in quiz_operation["parameters"] if p.get("name") == "Idempotency-Key" and p.get("in") == "header"]
+    if len(headers) != 1 or headers[0]["required"] is not False:
+        raise RuntimeError("Quiz retry key must be exactly one optional header.")
+    quiz_operation["parameters"] = [p for p in quiz_operation["parameters"] if p not in headers]
     # The existing editor now supplies course context; old unambiguous URLs still work.
     for method in ("get", "put", "delete"):
         operation = current["paths"]["/admin/content/{content_slug}"][method]
@@ -65,7 +76,7 @@ def verify_contract():
     if current["components"]["schemas"] != previous["components"]["schemas"]:
         raise RuntimeError("Existing request/response schemas differ.")
     return {"existing_operations_preserved": 40, "existing_schemas_preserved": 27,
-            "additive_optional_course_context_parameters": 3}
+            "additive_optional_course_context_parameters": 3, "additive_optional_quiz_retry_headers": 1}
 
 
 async def capture_authoring_details(source, filename):

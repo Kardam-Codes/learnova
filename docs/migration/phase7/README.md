@@ -1,31 +1,48 @@
 # Phase 7: MongoDB quiz attempts, rewards, and retries
 
-**Status: backend implementation and source rehearsal are available; final policy and
-frontend retry integration are pending. Phase 7 is not yet complete.** The working app
-still selects PostgreSQL. MongoDB writes and the new schema extension have been exercised
-only in generated disposable databases.
+**Status: COMPLETE — implementation, schema setup, and final verification passed on
+2026-10-08.** The working app still selects PostgreSQL. MongoDB writes
+are exercised in disposable databases; the empty development target has the explicit
+receipt schema extension but has not received a permanent data import.
 
-## Decisions needed to finish
+## Approved policies and HTTP/frontend retries
 
-The user was asked two questions, and neither answer is inferred:
+The user approved blocking empty/incomplete submissions and using an optional
+`Idempotency-Key` header on 2026-10-08. The existing JSON body remains unchanged.
+Keyless MongoDB requests remain compatible and count as separate attempts.
 
-1. Should empty/incomplete quizzes reject submissions until ready, or retain SQL's
-   acceptance behavior? The recommended correction rejects submission while retaining
-   every draft definition and historical record.
-2. Should the retry protocol use the roadmap's optional `Idempotency-Key` header plus
-   a stable frontend key, require a key, or keep the old client? The recommendation is
-   optional headers so existing clients remain compatible.
+`GET /courses/quiz-submissions/capabilities` advertises support for the selected
+runtime. The frontend checks it before a new submission. PostgreSQL retains the
+legacy keyless flow; it does not support protected retries, and explicit keyed
+requests are rejected with 409 rather than silently ignoring the key. There is no
+storage fallback. MongoDB advertises support even when schema readiness fails;
+in that case submissions return setup 503 and the client retains their pending key.
 
-The backend service already accepts an internal optional `submission_key`; the HTTP
-router and frontend have not yet exposed or sent it. There is no claim of protection
-against separately received HTTP retries without a retained key. The existing request
-body and HTTP contract remain unchanged at this stage.
+In MongoDB mode, the frontend saves a UUID key and the original answers to tab-scoped
+sessionStorage before sending. Records are scoped by API server/user/course/quiz and
+survive reloads. Pending submissions lock answer editing and offer Retry submission.
+Network/server failures preserve the same key and payload; definitive answer-validation
+or draft-readiness rejection releases the pending record for correction. Confirmed
+results are retained, so a failed course refresh cannot consume another attempt.
+Start Quiz explicitly clears a confirmed result and starts a deliberate new attempt.
+An unresolved submission must be retried first. A synchronous in-flight guard also
+prevents duplicate clicks. Browser storage must work before a protected submission
+can be sent; manually clearing storage removes the client's retry identity.
 
-Until the draft policy is settled, isolated backend submissions retain SQL's inner-join
-question selection, including zero-question scoring/acceptance. Drafts are not deleted,
-silently unpublished, or rewritten. This is the inspected compatibility behavior, not
-approval of the proposed alternative. The persistent target still has v1 only and quiz
-writes return a clear setup 503 until the explicit receipt migration is applied.
+New MongoDB submissions return 409 when there are no questions, a blank question prompt,
+fewer than two options, a blank option label, or no correct option on any question.
+Every question must be ready; incomplete questions are never silently omitted from scoring.
+Rejected submissions leave drafts, attempt counters, progress, balances, and rewards unchanged.
+Authorized keyed replays still return the committed receipt after a later edit makes a quiz
+unready; they do not create a new attempt. Drafts are not deleted, unpublished, or rewritten.
+This is a deliberate correction to legacy SQL submission behavior; the working PostgreSQL
+application's database selection is unchanged. Unprepared targets return setup 503
+until the explicit receipt migration is applied.
+
+Readiness regression verification: 111 quiz/schema tests passed on 2026-10-08,
+including seven new rejection/restoration cases and committed-result replay after an
+edit creates an empty definition. Existing PostgreSQL data/schema remain unchanged.
+This scoped run supplements the earlier 320-test backend-stage run.
 
 ## Atomic scoring and side effects
 
@@ -88,7 +105,7 @@ insertion too, correcting SQL's unconditional first-insert Newbie default in acc
 with the Phase 7 roadmap. Existing stored balances/badges remain untouched until a
 normal new submission updates that learner's balance.
 
-## Internal retry semantics and recorded history
+## Retry semantics and recorded history
 
 Internal keys are scoped to quiz/user, contain 1–128 visible ASCII characters, and
 are optional. Without a key, each accepted request is a distinct attempt. Canonical
@@ -127,7 +144,9 @@ For a prepared, quiescent development/test target, after v1 initialization:
 .\.venv\Scripts\python.exe -m backend.db.mongo.quiz_schema
 ```
 
-This command has **not** been applied to the persistent development target yet. It is
+This command was applied to the empty development target on 2026-10-08 with zero domain
+records rewritten. Its prior collection definitions and upgrade evidence are retained
+privately. It is
 guarded to that target or generated test database names; it never operates on unrelated
 device databases. Full validator/index/ledger preflight precedes DDL. Unknown drift
 stops the command. If interrupted between `collMod` and the ledger write, it resumes
@@ -140,11 +159,20 @@ compatibility. There is no automatic DDL during application requests.
 ## Verification
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest backend\tests -q --junitxml=.local\migration-baseline\phase7-all-tests.xml
+.\.venv\Scripts\python.exe -m pytest backend\tests -q --junitxml=.local\migration-baseline\phase7-final-all-tests.xml
 .\.venv\Scripts\python.exe -m backend.db.migration.verify_phase7_baseline
+node --test src/utils/quizSubmission.test.js
+npm run build
 ```
 
-The full backend-stage regression suite passes **320 tests** in 328.93 seconds: 104
+The final full regression suite passes **333 tests** in 393.79 seconds: 117 quiz/schema,
+60 progress/review, 43 prior learner/reconciliation, 39 admin, 37 auth, and 37 infrastructure.
+No failures, errors, or skips; only the existing upstream Starlette/AnyIO warning.
+Five frontend tests and the production build (90 modules) also pass. The final private
+state audit confirms zero generated test databases and zero persistent domain records,
+unclaimed bootstrap, and both schema ledgers. These results supersede the backend-stage run.
+
+Historical backend-stage regression passed **320 tests** in 328.93 seconds: 104
 quiz/schema, 60 progress/review, 43 prior learner/reconciliation, 39 admin, 37 auth, and
 37 infrastructure. This includes the added cross-course, canonical replay, history/edit,
 and deletion cases. There are no failures, errors, or skips; only the existing upstream
@@ -154,14 +182,17 @@ The read-only source rehearsal preserves all 85 source rows from 19 tables and t
 142-column mapping before writes; 76 saved responses in both modes, 17 admin details,
 and 180 learner responses across six identities still match. Only the eight known
 attendee timestamp precision normalizations are needed. Original OpenAPI operations
-and schemas remain unchanged at this stage.
+and all 27 original schemas remain compatible, with one optional retry header,
+three existing optional admin context parameters, and additive capability/health routes.
 
 After repeating Phase 6's five progress/two review updates, it completes prerequisites
-for an imported identity, exercises two quiz submissions, an internal keyed replay,
+for an imported identity, exercises two keyed HTTP quiz submissions, a keyed HTTP replay,
 409 for key reuse with different answers, and three follow-up learner reads. Reward
 events link one-to-one to new attempts; source balances/access and untargeted records
-are preserved. HTTP retry-header integration is explicitly pending, so this rehearsal
-does not claim an end-to-end keyed frontend submission.
+are preserved. Five frontend Node tests exercise retained retry state, lost-response/
+reload recovery, deliberate new attempts, scope isolation, storage failures, definitive
+rejections, and actual API header construction. A production frontend build passes.
+This is API and frontend-module verification; no browser UI automation is claimed.
 
 The real source has four quizzes (three empty), three questions, **zero historical
 attempts**, and one historical point event. Gapped legacy attempt allocation is therefore
@@ -171,13 +202,14 @@ No legacy point-event attempt link or balance reconstruction is invented.
 PostgreSQL tables/schema remain unchanged and the temporary import is removed. No SQL
 write baseline is claimed while the earlier isolated restore/write-test decision is
 pending. Verification calls the real backend and MongoDB; frontend fallback data cannot
-satisfy these checks. No frontend source/build or browser coverage has changed yet.
+satisfy these checks.
 Private evidence is under ignored `.local/migration-baseline/`; the root roadmap remains
 ignored. Payments/reporting and working-app activation remain separate later work.
 
-The final backend-stage audit confirms zero persistent domain records, unclaimed auth
-bootstrap, and the original v1-only ledger; no generated test database remains. All
-three local selectors remain PostgreSQL, and MongoDB remains 8.3.7 on `learnova-rs`.
-Original device database fingerprints, Python syntax, and dependency checks pass.
-The persistent v2 extension, readiness decision, and HTTP/frontend retry integration
-remain pending; these verified backend results do not mark all of Phase 7 complete.
+The development target retains zero domain records and unclaimed auth bootstrap, with
+the frozen v1 and additive v2 receipt ledgers. All three local selectors remain
+PostgreSQL; MongoDB remains 8.3.7 on `learnova-rs`. Original device database fingerprints
+match their backup. Final full-suite and cleanup evidence is recorded in the private
+Phase 7 report and `phase7-final-state.json`. Working-app cutover, payments,
+reporting, PostgreSQL restore/write-baseline checks, and final full migration remain
+separate work.

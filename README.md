@@ -5,14 +5,14 @@ Learnova is an eLearning platform with two product surfaces:
 - learner-facing website
 - instructor/admin backoffice
 
-This repository contains the React frontend, the FastAPI backend, PostgreSQL schema and seed assets, and shared route/data contracts used across both sides.
+This repository contains the React frontend, the FastAPI backend, MongoDB application storage, historical SQL migration assets, and shared route/data contracts used across both sides.
 
 ## Stack
 
 - Frontend: React 18 + Vite
 - Routing: React Router
 - PDF viewing: `pdfjs-dist`
-- Backend: FastAPI + PostgreSQL
+- Backend: FastAPI + MongoDB (replica set)
 - Python DB drivers: `psycopg` or `psycopg2`
 - Shared contracts: `shared/types/common_types.ts`
 
@@ -209,129 +209,49 @@ Responsibilities:
 
 ## Database
 
-Learnova uses PostgreSQL.
+MongoDB stores users, courses, content, enrollments, progress, quizzes/attempts,
+points, reviews and payments. Questions/options, attachments and quiz answers
+are embedded; UUID strings preserve existing API identities. Transactions and
+unique indexes protect enrollment, quiz rewards and payment access.
 
-Core database assets:
-
-- `backend/db/schema.sql`
-- `backend/db/seed.sql`
-- `backend/db/migrations/001_extensions_and_enums.sql`
-- `backend/db/migrations/002_core_entities.sql`
-- `backend/db/migrations/003_learning_progress_and_reviews.sql`
-- `backend/db/migrations/004_course_payment_orders.sql`
-- `backend/db/migrations/005_quiz_attempt_answers_msq.sql`
-
-### Main Tables
-
-- `users`
-- `courses`
-- `course_tags`
-- `course_tag_map`
-- `course_attendees`
-- `course_content`
-- `content_attachments`
-- `quizzes`
-- `quiz_questions`
-- `quiz_options`
-- `quiz_reward_rules`
-- `quiz_attempts`
-- `quiz_attempt_answers`
-- `course_progress`
-- `content_progress`
-- `learner_points`
-- `point_events`
-- `course_reviews`
-- `course_payment_orders`
-
-### Reporting
-
-Reporting is driven by the `reporting_course_progress` view. It supports:
-
-- course name
-- participant name
-- enrolled date
-- start date
-- time spent
-- completion percentage
-- completed date
-- status
-
-### Database Setup
-
-Create the database:
-
-```bash
-psql -U postgres -c "CREATE DATABASE learnova;"
+```mermaid
+flowchart LR
+  users --> enrollments --> courses
+  courses --> course_content --> quizzes
+  quizzes --> embedded_questions_options_rewards
+  users --> progress_reviews_points
+  users --> payment_orders
+  quizzes --> quiz_attempts --> embedded_answers
 ```
 
-Run migrations:
+The document model fits variable lesson metadata and keeps quiz questions/options
+in one aggregate. Cross-document access, rewards and payments still require
+references, indexes and transactions. The choice fulfills the NoSQL project
+requirement; performance is measured rather than assumed.
 
-```bash
-psql -U postgres -d learnova -f backend/db/migrations/001_extensions_and_enums.sql
-psql -U postgres -d learnova -f backend/db/migrations/002_core_entities.sql
-psql -U postgres -d learnova -f backend/db/migrations/003_learning_progress_and_reviews.sql
-psql -U postgres -d learnova -f backend/db/migrations/004_course_payment_orders.sql
-psql -U postgres -d learnova -f backend/db/migrations/005_quiz_attempt_answers_msq.sql
+A replica set is required, including for local development. Runtime schema
+manifests live under `backend/db/mongo/specs`; setup is explicit and repeatable:
+
+```powershell
+.\.venv\Scripts\python.exe -m backend.db.mongo.setup --apply
 ```
 
-Seed base demo data:
+Configure `.env` from `.env.example` first. Setup does not import or delete data.
+The first registration in a new empty database claims the administrator slot;
+existing imports preserve roles and access. Do not seed demo credentials into
+an imported database.
 
-```bash
-psql -U postgres -d learnova -f backend/db/seed.sql
-```
-
-Apply the full consolidated snapshot instead of migrations if needed:
-
-```bash
-psql -U postgres -d learnova -f backend/db/schema.sql
-psql -U postgres -d learnova -f backend/db/seed.sql
-```
+SQL files under `backend/db` and PostgreSQL services remain historical export/
+rollback assets. They are not the active setup path. Optional migration tools
+require `backend/requirements-migration.txt`; see
+[transfer and recovery](backend/db/migration/PHASE_9_10.md).
 
 ## Bulk Data Generation
 
-The repo includes a bulk SQL generator at `backend/db/load_bulk_schema_data.py`.
-
-Available dataset modes:
-
-- `generic`
-- `reporting`
-- `full`
-
-### Generate 200 generic rows
-
-```bash
-python backend/db/load_bulk_schema_data.py --dataset generic --count 200
-```
-
-Output:
-
-- `backend/db/bulk_seed_200.sql`
-
-### Generate 40 reporting courses and 320 reporting rows
-
-```bash
-python backend/db/load_bulk_schema_data.py --dataset reporting --course-count 40 --reporting-rows 320
-```
-
-Output:
-
-- `backend/db/reporting_seed_40_courses_320_rows.sql`
-
-### Generate the combined full dataset
-
-```bash
-python backend/db/load_bulk_schema_data.py --dataset full --count 200 --course-count 40 --reporting-rows 320
-```
-
-Output:
-
-- `backend/db/full_seed_200_courses_320_reporting_rows.sql`
-
-Execute any generated SQL directly against PostgreSQL:
-
-```bash
-python backend/db/load_bulk_schema_data.py --dataset full --count 200 --course-count 40 --reporting-rows 320 --execute
-```
+Use `python -m backend.db.migration.workload --help` for isolated, synthetic
+MongoDB volume fixtures and query measurements. The tool requires a frozen
+export, a separate unique test database and explicit apply/write-pause flags.
+Never load generated SQL into the active application database.
 
 ## Local Development
 
@@ -363,22 +283,20 @@ Run the API:
 .\.venv\Scripts\python.exe -m uvicorn backend.main:app --reload
 ```
 
-MongoDB migration infrastructure is available; the working app retains its
-PostgreSQL storage selection. See [Phase 2 setup and verification](docs/migration/phase2/README.md)
-for replica-set settings, development fixtures, tests, backups, and recovery.
-MongoDB authentication is implemented and tested separately; see
-[Phase 3 authentication](docs/migration/phase3/README.md). MongoDB admin course,
-content, quiz, and attendee storage is also implemented and tested separately; see
-[Phase 4 admin authoring](docs/migration/phase4/README.md). `ADMIN_STORAGE=mongo`
-requires `AUTH_STORAGE=mongo`. MongoDB learner catalog, detail, content/quiz reads,
-and free enrollment are implemented; see [Phase 5 learner access](docs/migration/phase5/README.md).
-`COURSES_STORAGE=mongo` requires MongoDB auth and admin storage. Lesson progress and
-review writes are implemented and tested; see [Phase 6 progress and reviews](docs/migration/phase6/README.md).
-The [Phase 7 quiz backend](docs/migration/phase7/README.md) implements scoring, attempts,
-progress, points, and internal retry receipts; draft policy and frontend/header integration
-are still pending. MongoDB quiz writes require its explicit schema extension (503 until
-prepared). Payments retain explicit 501 guards; reporting remains PostgreSQL.
-Working-app activation remains an open decision.
+For verification, install `backend/requirements-dev.txt`, then run
+`python -m pytest backend/tests`,
+`node --test src/utils/quizSubmission.test.js src/utils/paymentVerification.test.js`,
+and `npm.cmd run build`.
+
+All application selectors must be `mongo` for MongoDB-only operation. The
+PostgreSQL driver is excluded from runtime requirements and retained only in
+optional migration/development requirements. `/db/health` and `/mongo/health`
+check MongoDB in this mode; `/health` checks the application process.
+
+For an existing project, preserve and migrate its data before switching storage.
+The guarded cutover command is `python -m backend.db.migration.cutover --help`.
+It requires accepted verification evidence and leaves writes paused until the
+post-restart smoke checks pass. It retains the previous environment privately.
 
 ## Environment
 
@@ -389,21 +307,24 @@ VITE_GOOGLE_CLIENT_ID=
 VITE_API_BASE_URL=
 ```
 
-Backend database settings are read from `DATABASE_URL` or from:
+Backend settings are documented in `.env.example`: `MONGODB_URI`,
+`MONGODB_DB=learnova`, all three `*_STORAGE=mongo` selectors and a private
+`JWT_SECRET`. Payment/Google credentials are optional until those integrations
+are used. Never commit `.env`, credentials, database exports or private backups.
 
-```env
-DB_HOST=
-DB_PORT=
-DB_NAME=
-DB_USER=
-DB_PASSWORD=
-```
+`APPLICATION_WRITES_PAUSED=true` blocks mutations during migration (local login
+and reads remain available). Restart the backend after configuration changes.
+Only reopen writes after final verification. Lossless rollback after new MongoDB
+writes requires reconciliation with PostgreSQL; changing selectors alone loses
+those writes. Backups are retained under ignored `.local/` until a separate
+retention/deletion decision.
 
-Payment and auth integrations may also require additional environment values depending on the local setup.
+## Demo Data
 
-## Current Demo Fallbacks
-
-The repo contains generated demo-data helpers in `src/data/generatedDemoData.js` so the UI can still render large catalog and reporting scenarios during local development when the live backend is unavailable or undersized.
+`VITE_DEMO_MODE=false` is the default. Live catalog/report responses are no longer
+padded to artificial row counts, and API failures show errors rather than
+synthetic records. Set `VITE_DEMO_MODE=true` only for an explicit frontend demo,
+and restart/rebuild Vite after changing it.
 
 ## Working Rules
 

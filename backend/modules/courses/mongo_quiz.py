@@ -35,6 +35,19 @@ def quiz_fingerprint(quiz):
         "reward_rules": sorted(quiz["reward_rules"], key=lambda rule: rule["attempt_number"])})
 
 
+def require_submittable_quiz(quiz):
+    """Retain drafts, but require a complete definition before a new attempt."""
+    questions = quiz["questions"]
+    if not questions or any(
+        not question["question_text"].strip()
+        or len(question["options"]) < 2
+        or any(not option["option_text"].strip() for option in question["options"])
+        or not any(option["is_correct"] for option in question["options"])
+        for question in questions
+    ):
+        raise HTTPException(409, "This quiz is not ready for submission. Please contact your instructor.")
+
+
 def score_answers(quiz, submitted, answer_ids):
     questions = sorted(quiz["questions"], key=lambda question: question["display_order"])
     if set(submitted) != {question["id"] for question in questions}:

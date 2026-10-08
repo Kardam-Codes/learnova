@@ -9,7 +9,7 @@ What it is: FastAPI routes for course catalog, single course detail, and course 
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
 from backend.modules.auth.dependencies import get_current_user
 from backend.modules.courses.storage import get_course_service
@@ -22,6 +22,12 @@ from backend.modules.courses.schemas import (
 
 
 router = APIRouter(prefix="/courses", tags=["courses"])
+
+
+@router.get("/quiz-submissions/capabilities")
+def quiz_submission_capabilities(request: Request, current_user: dict = Depends(get_current_user)):
+    """Advertise retry support without changing the existing quiz payloads."""
+    return {"idempotencyKeySupported": getattr(request.app.state, "courses_storage", "postgres") == "mongo"}
 
 
 @router.get("")
@@ -138,15 +144,22 @@ def get_quiz(course_slug: str, content_slug: str, current_user: dict = Depends(g
 
 @router.post("/{course_slug}/quizzes/{content_slug}/attempts")
 def post_quiz_attempt(
+    request: Request,
     course_slug: str,
     content_slug: str,
     payload: QuizAttemptRequest,
     current_user: dict = Depends(get_current_user),
     courses=Depends(get_course_service),
+    submission_key: str | None = Header(default=None, alias="Idempotency-Key"),
 ):
     """
     This scores and stores a learner quiz attempt.
     """
 
     answer_payload = [answer.model_dump() for answer in payload.answers]
+    if submission_key is not None:
+        if getattr(request.app.state, "courses_storage", "postgres") != "mongo":
+            raise HTTPException(409, "Retry keys are only supported by MongoDB quiz storage.")
+        return courses.submit_quiz_attempt(course_slug, content_slug, current_user, answer_payload,
+                                           submission_key=submission_key)
     return courses.submit_quiz_attempt(course_slug, content_slug, current_user, answer_payload)

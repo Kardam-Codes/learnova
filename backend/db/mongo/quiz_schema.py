@@ -10,11 +10,11 @@ from fastapi import HTTPException
 
 from backend.config.mongo import create_mongo_client, get_mongo_settings
 from backend.db.mongo.init_db import (
-    MIGRATION_ID, SchemaDriftError, assert_development_database, index_options, load_spec,
+    MIGRATION_ID, SchemaDriftError, assert_development_database, assert_setup_database, index_options, load_spec,
 )
 
 EXTENSION_ID = "mongodb-quiz-receipts-v2"
-EXTENSION_PATH = Path(__file__).resolve().parents[3] / "docs/migration/phase7/mongodb-quiz-receipts-v2.json"
+EXTENSION_PATH = Path(__file__).resolve().parent / "specs/mongodb-quiz-receipts-v2.json"
 
 
 def load_extension():
@@ -39,9 +39,13 @@ def extended_definitions(spec, base_checksum):
 
 def definitions_for_extensions(spec, base_checksum, records):
     definitions, checksum = extended_definitions(spec, base_checksum)
-    if (len(records) != 1 or records[0]["_id"] != EXTENSION_ID or records[0].get("version") != 2
-            or records[0].get("checksum") != checksum):
+    quiz = [row for row in records if row["_id"] == EXTENSION_ID]
+    others = [row for row in records if row["_id"] != EXTENSION_ID]
+    if (len(quiz) != 1 or quiz[0].get("version") != 2 or quiz[0].get("checksum") != checksum):
         raise SchemaDriftError("Unknown or changed schema extension; explicit migration review is required.")
+    if others:
+        from backend.db.mongo.payment_schema import extend_definitions
+        definitions = extend_definitions(definitions, base_checksum, others)
     return definitions
 
 
@@ -52,8 +56,8 @@ def require_quiz_receipts(database, session=None):
         raise HTTPException(503, "MongoDB quiz receipt schema setup is incomplete. Run the Phase 7 migration first.")
 
 
-def upgrade_quiz_receipts(database):
-    assert_development_database(database.name)
+def upgrade_quiz_receipts(database, *, application=False):
+    assert_setup_database(database.name, application)
     hello = database.client.admin.command("hello")
     if not hello.get("setName") or not hello.get("isWritablePrimary"):
         raise RuntimeError("Quiz receipt migration requires a writable replica-set primary.")
@@ -65,7 +69,7 @@ def upgrade_quiz_receipts(database):
     if (len(base) != 1 or base[0].get("version") != 1 or base[0].get("checksum") != base_checksum):
         raise SchemaDriftError("Initialize and verify the frozen v1 schema before the Phase 7 migration.")
     if extensions:
-        definitions_for_extensions(spec, base_checksum, extensions)
+        definitions = definitions_for_extensions(spec, base_checksum, extensions)
     existing = {row["name"]: row for row in database.list_collections()}
     if set(existing) != set(definitions):
         raise SchemaDriftError("Quiz receipt migration requires exactly the managed v1 collections.")

@@ -1,4 +1,4 @@
-"""Transactional MongoDB course authoring. Reporting remains a later migration phase."""
+"""Transactional MongoDB course authoring and enrollment reporting."""
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -64,6 +64,11 @@ def admin_errors(function):
 
 class MongoAdminService:
     save_admin_upload = staticmethod(save_admin_upload)
+
+    @admin_errors
+    def get_reporting_course_progress(self, status_filter=None):
+        from backend.modules.admin.mongo_reporting import course_progress_report
+        return course_progress_report(self.database, status_filter)
 
     def __init__(self, database):
         self.database = database

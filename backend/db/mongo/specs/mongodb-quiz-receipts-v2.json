@@ -1,0 +1,76 @@
+{
+  "migration_id": "mongodb-quiz-receipts-v2",
+  "version": 2,
+  "base_checksum": "8cc0040d337068cebb97642976d6b63f4a9f1d0927a5fafb6f36a19a335ffef8",
+  "quiz_attempt_properties": {
+    "quiz_fingerprint": {
+      "bsonType": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "question_count": {
+      "bsonType": "int",
+      "minimum": 0
+    },
+    "result_snapshot": {
+      "bsonType": "object",
+      "required": [
+        "attemptNumber",
+        "score",
+        "pointsEarned",
+        "totalPoints",
+        "currentBadge",
+        "nextTarget",
+        "message"
+      ],
+      "properties": {
+        "attemptNumber": {
+          "bsonType": [
+            "int",
+            "long"
+          ],
+          "minimum": 1
+        },
+        "score": {
+          "bsonType": "double",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "pointsEarned": {
+          "bsonType": [
+            "int",
+            "long"
+          ],
+          "minimum": 0
+        },
+        "totalPoints": {
+          "bsonType": [
+            "int",
+            "long"
+          ],
+          "minimum": 0
+        },
+        "currentBadge": {
+          "bsonType": "string",
+          "enum": [
+            "Newbie",
+            "Explorer",
+            "Achiever",
+            "Specialist",
+            "Expert",
+            "Master"
+          ]
+        },
+        "nextTarget": {
+          "bsonType": "int",
+          "enum": [
+            100
+          ]
+        },
+        "message": {
+          "bsonType": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -5,7 +5,8 @@
  * What it is: A fullscreen learner player with a persistent sidebar, iframe viewers, quiz subflow, and reward state.
  */
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { Suspense, lazy, useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
+import { createQuizSubmissionStore } from "../utils/quizSubmission";
 import { buildLearningRoute, buildQuizQuestionRoute, buildQuizRewardRoute } from "../utils/learningRoutes";
 import { LEARNING_CONTENT_MODE } from "../../shared/types/common_types";
 import EmptyState from "../components/EmptyState";
@@ -14,8 +15,10 @@ import StatusBanner from "../components/StatusBanner";
 import { useAuth } from "../context/AuthContext";
 import { getGeneratedCourseDetail } from "../data/generatedDemoData";
 import {
+  API_BASE_URL,
   fetchCourseContentRequest,
   fetchCourseDetailRequest,
+  fetchQuizSubmissionCapabilitiesRequest,
   submitQuizAttemptRequest,
   updateCourseContentProgressRequest,
 } from "../utils/apiClient";
@@ -174,13 +177,13 @@ function LearningFooterAction({ label, onClick, disabled = false }) {
   );
 }
 
-function QuizChoices({ question, selectedIndexes, onSelect }) {
+function QuizChoices({ question, selectedIndexes, onSelect, disabled }) {
   const allowsMultipleAnswers = Boolean(question?.allowsMultipleAnswers);
 
   return (
     <div className="quiz-options">
       {question.options.map((option, optionIndex) => (
-        <label className="quiz-option" key={`${question.id}-${optionIndex}`} onClick={() => onSelect(optionIndex)}>
+        <label className="quiz-option" key={`${question.id}-${optionIndex}`} onClick={disabled ? undefined : () => onSelect(optionIndex)}>
           <span
             className={`quiz-radio ${selectedIndexes.includes(optionIndex) ? "is-selected" : ""} ${allowsMultipleAnswers ? "is-multiple" : ""}`}
           />
@@ -214,6 +217,8 @@ function LearningMainContent({
   quizSelections,
   onSelectQuizOption,
   onSubmitQuizAttempt,
+  onStartQuizAttempt,
+  hasPendingSubmission,
   quizReward,
   isSubmittingQuiz,
   onCloseReward,
@@ -313,9 +318,10 @@ function LearningMainContent({
             <p>- Total Questions '{contentItem.quizRules?.totalQuestions ?? questions.length}'</p>
             <p>- Multiple Attempts</p>
           </div>
-          <Link className="catalog-action-button is-continue quiz-main-button" to={buildQuizQuestionRoute(course.id, contentItem.id, 0)}>
+          <button type="button" className="catalog-action-button is-continue quiz-main-button"
+            onClick={onStartQuizAttempt} disabled={hasPendingSubmission || isSubmittingQuiz || !questions.length}>
             Start Quiz
-          </Link>
+          </button>
         </section>
         <div className="learning-footer-actions">
           <LearningFooterAction
@@ -328,6 +334,9 @@ function LearningMainContent({
   }
 
   const isFinalQuestion = questionNumber === questions.length - 1;
+  if (!currentQuestion) {
+    return <EmptyState title="This quiz is not ready" description="Please contact your instructor." />;
+  }
   const proceedLabel = isFinalQuestion ? "Proceed and Complete Quiz" : "Proceed";
   const selectedIndexes = currentQuestion
     ? quizSelections[currentQuestion.id] ?? []
@@ -347,13 +356,14 @@ function LearningMainContent({
         <QuizChoices
           question={currentQuestion}
           selectedIndexes={selectedIndexes}
+          disabled={isSubmittingQuiz || hasPendingSubmission}
           onSelect={(optionIndex) => onSelectQuizOption(currentQuestion.id, optionIndex)}
         />
         <button
           type="button"
           className="catalog-action-button is-start quiz-main-button"
           onClick={() => onSubmitQuizAttempt({ isFinalQuestion, questionNumber })}
-          disabled={!hasSelection || isSubmittingQuiz}
+          disabled={!hasSelection || isSubmittingQuiz || hasPendingSubmission}
         >
           {proceedLabel}
         </button>
@@ -382,13 +392,35 @@ export default function LessonPlayerPage() {
   const [loadError, setLoadError] = useState("");
   const [quizError, setQuizError] = useState("");
   const [isLoadingCourse, setIsLoadingCourse] = useState(true);
+  const [savedSubmission, setSavedSubmission] = useState(null);
+  const submissionStore = useMemo(() => createQuizSubmissionStore({
+    getItem: (key) => window.sessionStorage.getItem(key),
+    setItem: (key, value) => window.sessionStorage.setItem(key, value),
+    removeItem: (key) => window.sessionStorage.removeItem(key),
+  }, [API_BASE_URL, user?.id, courseId, contentId]), [user?.id, courseId, contentId]);
+  const activeStore = useRef(submissionStore);
+  activeStore.current = submissionStore;
+  const inFlight = useRef(null);
 
   useEffect(() => {
-    // Clear previous content-specific state immediately when the route changes.
+    // Recover pending answers/keys after a reload, scoped to user/server/course/quiz.
     setContentOverride(null);
     setQuizReward(null);
     setQuizSelections({});
-  }, [contentId]);
+    setSavedSubmission(null);
+    setIsSubmittingQuiz(false);
+    setQuizError("");
+    try {
+      const record = submissionStore.read();
+      setSavedSubmission(record);
+      if (record) {
+        setQuizSelections(Object.fromEntries(record.payload.answers.map((answer) => [answer.questionId, answer.selectedOptionIndexes])));
+        setQuizReward(record.result ?? null);
+      }
+    } catch {
+      setQuizError("Saved quiz retry data could not be loaded. Check browser storage before submitting.");
+    }
+  }, [submissionStore]);
 
   useEffect(() => {
     let isMounted = true;
@@ -479,6 +511,7 @@ export default function LessonPlayerPage() {
     : contentItem;
 
   const handleSelectQuizOption = (questionId, optionIndex) => {
+    if (inFlight.current === submissionStore || (savedSubmission && !savedSubmission.result)) return;
     setQuizSelections((current) => ({
       ...current,
       [questionId]: (() => {
@@ -498,7 +531,22 @@ export default function LessonPlayerPage() {
     }));
   };
 
+  const handleStartQuizAttempt = () => {
+    if (inFlight.current === submissionStore) return;
+    try {
+      submissionStore.start();
+      setSavedSubmission(null);
+      setQuizSelections({});
+      setQuizReward(null);
+      setQuizError("");
+      navigate(buildQuizQuestionRoute(course.id, resolvedContentItem.id, 0));
+    } catch (error) {
+      setQuizError(error.message);
+    }
+  };
+
   const handleSubmitQuizAttempt = async ({ isFinalQuestion, questionNumber }) => {
+    if (inFlight.current === submissionStore) return;
     if (!resolvedContentItem?.quizQuestions) {
       return;
     }
@@ -510,26 +558,59 @@ export default function LessonPlayerPage() {
       return;
     }
 
+    inFlight.current = submissionStore;
     setIsSubmittingQuiz(true);
     setQuizError("");
 
     try {
-      const response = await submitQuizAttemptRequest(course.id, resolvedContentItem.id, token, {
+      const payload = {
         answers: resolvedContentItem.quizQuestions.map((question) => ({
           questionId: question.id,
           selectedOptionIndexes: quizSelections[question.id] ?? [],
         })),
-      });
-
+      };
+      let record = submissionStore.read();
+      if (!record) {
+        const capabilities = await fetchQuizSubmissionCapabilitiesRequest(token);
+        if (activeStore.current !== submissionStore) return;
+        if (capabilities.idempotencyKeySupported) record = submissionStore.prepare(payload);
+      }
+      if (activeStore.current !== submissionStore) return;
+      setSavedSubmission(record);
+      const response = record?.result ?? await submitQuizAttemptRequest(
+        course.id, resolvedContentItem.id, token, record?.payload ?? payload, record?.key,
+      );
+      if (!Number.isInteger(response?.attemptNumber) || response.attemptNumber < 1) {
+        throw new Error("The quiz result could not be read. Retry your submission to recover it.");
+      }
+      if (record) submissionStore.complete(record.key, response);
+      if (activeStore.current !== submissionStore) return;
+      setSavedSubmission(record ? { ...record, result: response } : null);
       setQuizReward(response);
-
-      const refreshedCourse = await fetchCourseDetailRequest(course.id, token);
-      setCourse(refreshedCourse);
       navigate(buildQuizRewardRoute(course.id, resolvedContentItem.id));
+      // A failed dashboard refresh must never turn a confirmed submission into a retry.
+      try {
+        const refreshedCourse = await fetchCourseDetailRequest(course.id, token);
+        if (activeStore.current === submissionStore) setCourse(refreshedCourse);
+      } catch {
+        if (activeStore.current === submissionStore) setQuizError("Your quiz result is saved. Course progress could not refresh; reload to update it.");
+      }
     } catch (error) {
-      setQuizError(error.message || "Quiz submission could not be completed.");
+      // These validation/readiness responses prove that no new attempt committed.
+      // Network errors and ambiguous/server failures retain the original key/payload.
+      if ([400, 422].includes(error.status) || (error.status === 409 && error.message.startsWith("This quiz is not ready"))) {
+        try {
+          const rejected = submissionStore.read();
+          if (rejected && !rejected.result) submissionStore.reject(rejected.key);
+          if (activeStore.current === submissionStore) setSavedSubmission(null);
+        } catch {
+          // Preserve pending UI if browser storage became unavailable.
+        }
+      }
+      if (activeStore.current === submissionStore) setQuizError(error.message || "Quiz submission could not be completed.");
     } finally {
-      setIsSubmittingQuiz(false);
+      if (inFlight.current === submissionStore) inFlight.current = null;
+      if (activeStore.current === submissionStore) setIsSubmittingQuiz(false);
     }
   };
 
@@ -606,6 +687,15 @@ export default function LessonPlayerPage() {
             message={contentAccessError}
             onClose={() => setContentAccessError("")}
           />
+          {savedSubmission && !savedSubmission.result ? (
+            <div>
+              <p>Your quiz submission is awaiting confirmation. Retry it before starting another attempt.</p>
+              <button type="button" className="catalog-action-button" disabled={isSubmittingQuiz}
+                onClick={() => handleSubmitQuizAttempt({ isFinalQuestion: true })}>
+                {isSubmittingQuiz ? "Confirming submission..." : "Retry submission"}
+              </button>
+            </div>
+          ) : null}
           {isLoadingCourse ? (
             <LoadingBlock
               title="Loading learning player"
@@ -631,6 +721,8 @@ export default function LessonPlayerPage() {
             quizSelections={quizSelections}
             onSelectQuizOption={handleSelectQuizOption}
             onSubmitQuizAttempt={handleSubmitQuizAttempt}
+            onStartQuizAttempt={handleStartQuizAttempt}
+            hasPendingSubmission={Boolean(savedSubmission && !savedSubmission.result)}
             quizReward={quizReward}
             isSubmittingQuiz={isSubmittingQuiz}
             onCloseReward={() => navigate(`/courses/${course.id}`)}

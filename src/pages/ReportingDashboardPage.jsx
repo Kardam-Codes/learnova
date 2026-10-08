@@ -12,6 +12,7 @@ import StatusBanner from "../components/StatusBanner";
 import { buildGeneratedReportingData } from "../data/generatedDemoData";
 import { useAuth } from "../context/AuthContext";
 import { fetchAdminCourseProgressReportRequest } from "../utils/apiClient";
+import { DEMO_MODE } from "../utils/demoMode";
 
 const MIN_REPORT_ROWS = 320;
 
@@ -20,6 +21,7 @@ function filterRowsByStatus(rows, activeFilter) {
 }
 
 function mergeReportingData(response, activeFilter) {
+  if (!DEMO_MODE) return { summary: response.summary ?? [], rows: response.rows ?? [] };
   const generated = buildGeneratedReportingData(MIN_REPORT_ROWS);
   const generatedRows = filterRowsByStatus(generated.rows, activeFilter);
   const liveRows = response.rows ?? [];

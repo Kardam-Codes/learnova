@@ -1,0 +1,36 @@
+{
+  "migration_id": "mongodb-payment-intents-v3",
+  "version": 3,
+  "base_checksum": "8cc0040d337068cebb97642976d6b63f4a9f1d0927a5fafb6f36a19a335ffef8",
+  "collection_name": "payment_checkout_intents",
+  "collection": {
+    "validator": {
+      "$jsonSchema": {
+        "bsonType": "object",
+        "required": ["_id", "schema_version", "course_id", "course_slug", "user_id", "amount_paise", "currency", "receipt", "status", "created_at", "updated_at"],
+        "properties": {
+          "_id": {"bsonType": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"},
+          "schema_version": {"bsonType": "int", "enum": [1]},
+          "course_id": {"bsonType": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"},
+          "user_id": {"bsonType": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"},
+          "course_slug": {"bsonType": "string"},
+          "amount_paise": {"bsonType": ["int", "long"], "minimum": 1},
+          "currency": {"bsonType": "string", "pattern": "^[A-Z]{3}$"},
+          "receipt": {"bsonType": "string", "pattern": "^lnv-[0-9a-f]{32}$", "maxLength": 40},
+          "status": {"bsonType": "string", "enum": ["prepared", "provider_created", "persisted", "uncertain", "conflict"]},
+          "provider_order_id": {"bsonType": "string", "pattern": "^order_[A-Za-z0-9]+$"},
+          "failure_code": {"bsonType": "string", "enum": ["provider_error", "provider_response_invalid", "persistence_error", "terms_changed"]},
+          "created_at": {"bsonType": "date"},
+          "updated_at": {"bsonType": "date"}
+        },
+        "additionalProperties": false
+      }
+    },
+    "validationLevel": "strict",
+    "validationAction": "error",
+    "indexes": [
+      {"name": "uq_checkout_receipt", "keys": [["receipt", 1]], "unique": true},
+      {"name": "ix_checkout_status_created", "keys": [["status", 1], ["created_at", 1]]}
+    ]
+  }
+}

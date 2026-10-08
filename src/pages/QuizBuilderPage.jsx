@@ -217,7 +217,8 @@ export default function QuizBuilderPage({ theme, toggleTheme }) {
   const navigate = useNavigate();
   const { token } = useAuth();
   const courseSlug = searchParams.get("course") ?? "odoo-crm";
-  const fallbackQuiz = useMemo(() => mapQuizFromApi(quizBuilderMock), []);
+  const fallbackQuiz = useMemo(() => import.meta.env.VITE_DEMO_MODE === "true"
+    ? mapQuizFromApi(quizBuilderMock) : buildInitialQuizState(), []);
   const [quiz, setQuiz] = useState(() => buildInitialQuizState());
   const [panelMode, setPanelMode] = useState("question");
   const [selectedQuestionId, setSelectedQuestionId] = useState("");

@@ -119,6 +119,10 @@ function createContentItems(courseId) {
 }
 
 export function buildGeneratedCatalogData(learnerName = "Learner") {
+  if (import.meta.env.VITE_DEMO_MODE !== "true") {
+    return { profile: { learnerName, totalPoints: 0, currentBadge: "Newbie", badgeTiers: [] },
+      courses: [], enrolledCourses: [], availableCourses: [] };
+  }
   const courses = Array.from({ length: COURSE_TARGET }, (_, index) => createCourseCard(index + 1));
   return {
     profile: {
@@ -134,6 +138,7 @@ export function buildGeneratedCatalogData(learnerName = "Learner") {
 }
 
 export function getGeneratedCourseDetail(courseId, learnerName = "Learner") {
+  if (import.meta.env.VITE_DEMO_MODE !== "true") return null;
   if (!/^bulk-course-\d{3}$/.test(courseId)) {
     return null;
   }
@@ -204,6 +209,7 @@ function createReportRow(index) {
 }
 
 export function buildGeneratedReportingData(rowCount = REPORT_TARGET) {
+  if (import.meta.env.VITE_DEMO_MODE !== "true") rowCount = 0;
   const rows = Array.from({ length: rowCount }, (_, index) => createReportRow(index + 1));
   const summary = [
     { id: "participants", label: "Total Participants", value: rows.length },

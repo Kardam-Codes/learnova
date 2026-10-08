@@ -47,11 +47,13 @@ function mapApiCourseToDashboardCourse(course) {
   };
 }
 
+import { DEMO_MODE } from "../utils/demoMode";
+
 export default function InstructorDashboard({ theme, toggleTheme }) {
   const { token } = useAuth();
   const [query, setQuery] = useState("");
   const [viewMode, setViewMode] = useState("list");
-  const [courses, setCourses] = useState(instructorCourses);
+  const [courses, setCourses] = useState(DEMO_MODE ? instructorCourses : []);
   const [loadError, setLoadError] = useState("");
   const [statusBanner, setStatusBanner] = useState(null);
   const [shareCourse, setShareCourse] = useState(null);
@@ -77,7 +79,7 @@ export default function InstructorDashboard({ theme, toggleTheme }) {
           return;
         }
 
-        setCourses(instructorCourses);
+        setCourses(DEMO_MODE ? instructorCourses : []);
         setLoadError(error.message);
       } finally {
         if (isMounted) {
@@ -176,7 +178,7 @@ export default function InstructorDashboard({ theme, toggleTheme }) {
           {loadError ? (
             <StatusBanner
               tone="error"
-              message="Live course data could not be loaded. Showing fallback records."
+              message={DEMO_MODE ? "Live course data could not be loaded. Showing demo records." : "Live course data could not be loaded. Please retry."}
               onClose={() => setLoadError("")}
             />
           ) : null}

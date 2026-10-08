@@ -8,7 +8,7 @@ import re
 
 from backend.config.mongo import create_mongo_client, get_mongo_settings
 
-SPEC_PATH = Path(__file__).resolve().parents[3] / "docs/migration/phase1/mongodb-schema-v1.json"
+SPEC_PATH = Path(__file__).resolve().parent / "specs/mongodb-schema-v1.json"
 MIGRATION_ID = "mongodb-schema-v1"
 
 
@@ -35,16 +35,20 @@ def index_options(index):
     return result
 
 
-def initialize_database(database) -> dict:
-    assert_development_database(database.name)
+def assert_setup_database(name, application=False):
+    if application and name == "learnova":
+        return
+    assert_development_database(name)
+
+
+def initialize_database(database, *, application=False) -> dict:
+    assert_setup_database(database.name, application)
     hello = database.client.admin.command("hello")
     if not hello.get("setName") or not hello.get("isWritablePrimary"):
         raise RuntimeError("Initialization requires a writable replica-set primary.")
     spec, checksum = load_spec()
     definitions = spec["collections"]
     existing = {item["name"]: item for item in database.list_collections()}
-    if set(existing) - set(definitions):
-        raise SchemaDriftError("Database contains unmanaged collections; initialization stopped.")
     records = list(database.schema_migrations.find()) if "schema_migrations" in existing else []
     if records:
         base = [record for record in records if record["_id"] == MIGRATION_ID]
@@ -55,6 +59,8 @@ def initialize_database(database) -> dict:
         if extensions:
             from backend.db.mongo.quiz_schema import definitions_for_extensions
             definitions = definitions_for_extensions(spec, checksum, extensions)
+    if set(existing) - set(definitions):
+        raise SchemaDriftError("Database contains unmanaged collections; initialization stopped.")
     if not records and any(database[name].find_one() is not None for name in existing):
         raise SchemaDriftError("Unversioned populated database; refusing to adopt existing records.")
     # Complete preflight before any DDL. Never drop indexes or rewrite validators.

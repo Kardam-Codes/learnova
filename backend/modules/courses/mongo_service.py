@@ -1,4 +1,4 @@
-"""MongoDB learner access, enrollment, progress, and reviews; later writes are guarded."""
+"""MongoDB learner access, enrollment, progress, reviews, quizzes, and payment persistence."""
 from collections import defaultdict
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -14,7 +14,8 @@ from backend.db.mongo.transactions import lock_course, run_transaction
 from backend.db.mongo.quiz_schema import require_quiz_receipts
 from backend.modules.courses.mongo_progress import recalculate_course_progress
 from backend.modules.courses.mongo_quiz import (
-    allocate_attempt, award_points, digest, normalize_answers, quiz_fingerprint, reward_for_attempt, score_answers,
+    allocate_attempt, award_points, digest, normalize_answers, quiz_fingerprint, require_submittable_quiz,
+    reward_for_attempt, score_answers,
 )
 from backend.modules.courses.service import BADGE_TIERS, _apply_content_locks
 
@@ -328,9 +329,10 @@ class MongoCourseService:
             item = next(item for item in items if item["id"] == content_slug)
             if item["isLocked"]:
                 raise HTTPException(403, item["lockReason"])
-            # Preserve SQL's inner-join question selection until the draft-readiness
-            # policy is finalized. Existing empty definitions are never deleted.
-            scoring_quiz = {**quiz, "questions": [question for question in quiz["questions"] if question["options"]]}
+            # Replays above recover committed results even if a later edit creates a
+            # draft. New attempts must score the entire ready definition.
+            require_submittable_quiz(quiz)
+            scoring_quiz = quiz
             score, records = score_answers(scoring_quiz, submitted, answer_ids)
             number = allocate_attempt(self.database, quiz, user["id"], session, stamp=stamp, identifier=ids["counter"])
             points = reward_for_attempt(quiz, number)
@@ -362,10 +364,14 @@ class MongoCourseService:
             return result
         return self._transaction(submit)
 
-    @staticmethod
-    def create_course_payment_order(*args, **kwargs):
-        raise HTTPException(501, "MongoDB checkout will be available after Phase 8.")
+    @learner_errors
+    def _payment_db(self, callback):
+        return callback()
 
-    @staticmethod
-    def verify_course_payment(*args, **kwargs):
-        raise HTTPException(501, "MongoDB payment verification will be available after Phase 8.")
+    def create_course_payment_order(self, course_slug, user):
+        from backend.modules.courses.mongo_payments import MongoPaymentService
+        return MongoPaymentService(self).create_order(course_slug, user)
+
+    def verify_course_payment(self, course_slug, user, payload):
+        from backend.modules.courses.mongo_payments import MongoPaymentService
+        return MongoPaymentService(self).verify(course_slug, user, payload)

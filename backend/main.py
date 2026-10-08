@@ -8,10 +8,12 @@ What it is: A FastAPI entrypoint with health checks and the initial auth routes.
 """
 
 from pathlib import Path
+import os
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.responses import JSONResponse
 
 from backend.modules.admin.router import router as admin_router
 from backend.modules.auth.router import router as auth_router
@@ -29,6 +31,15 @@ app = FastAPI(
     description="Backend API for Learnova learner and instructor workflows.",
     lifespan=mongo_lifespan,
 )
+
+
+@app.middleware("http")
+async def migration_write_pause(request: Request, call_next):
+    if (os.environ.get("APPLICATION_WRITES_PAUSED", "false").lower() == "true"
+            and request.method not in {"GET", "HEAD", "OPTIONS"}
+            and request.url.path != "/auth/login"):
+        return JSONResponse({"detail": "Application writes are paused for migration."}, status_code=503)
+    return await call_next(request)
 
 # Frontend development currently runs through Vite, so localhost origins are allowed here.
 app.add_middleware(
@@ -75,7 +86,7 @@ app.include_router(admin_router)
 
 @app.get("/mongo/health", tags=["system"])
 def mongo_health(request: Request):
-    """Readiness of the migration target; domain routes still use PostgreSQL."""
+    """Readiness of the configured MongoDB application database."""
     return check_mongo_readiness(request)
 
 

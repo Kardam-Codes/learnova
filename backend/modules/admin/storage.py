@@ -1,4 +1,4 @@
-"""Select admin authoring storage explicitly; reporting stays on its current store."""
+"""Select admin authoring and reporting storage explicitly."""
 from fastapi import Request
 
 from backend.config.mongo import get_mongo_database

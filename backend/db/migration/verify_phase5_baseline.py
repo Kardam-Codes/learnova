@@ -79,7 +79,7 @@ async def capture_learner_details(source, filename):
 
 
 def main(phase="phase5", exercise=None, prepare=None):
-    if phase not in {"phase5", "phase6", "phase7"}:
+    if phase not in {"phase5", "phase6", "phase7", "phase8", "phase11"}:
         raise ValueError("Unsupported verification phase.")
     settings = get_mongo_settings()
     if settings is None:

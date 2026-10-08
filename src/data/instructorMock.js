@@ -191,9 +191,16 @@ export const contentEditorMocks = {
 };
 
 export function getCourseConfigMock(courseId) {
+  if (import.meta.env.VITE_DEMO_MODE !== "true") {
+    return { title: "", description: "", tags: [], isPublished: false };
+  }
   return courseConfigMocks[courseId] ?? courseConfigMocks["new-course"];
 }
 
 export function getContentEditorMock(contentId) {
+  if (import.meta.env.VITE_DEMO_MODE !== "true") {
+    return { id: contentId, title: "", type: "Video", fileLabel: "Upload video", responsible: "",
+      allowDownload: false, description: "", attachmentFile: "", attachmentLink: "" };
+  }
   return contentEditorMocks[contentId] ?? contentEditorMocks["video-advanced-sales"];
 }

@@ -16,6 +16,7 @@ import json
 import os
 from dataclasses import dataclass
 from urllib import error, request
+from urllib.parse import quote
 
 from fastapi import HTTPException, status
 
@@ -100,3 +101,16 @@ def verify_razorpay_signature(*, order_id: str, payment_id: str, signature: str)
         hashlib.sha256,
     ).hexdigest()
     return hmac.compare_digest(expected_signature, signature)
+
+
+def fetch_razorpay_order(order_id: str) -> dict:
+    """Read a known order for operator reconciliation; never creates or charges it."""
+    settings = ensure_razorpay_configured()
+    token = base64.b64encode(f"{settings.key_id}:{settings.key_secret}".encode()).decode()
+    http_request = request.Request(RAZORPAY_ORDER_URL + "/" + quote(order_id, safe=""),
+                                   headers={"Authorization": "Basic " + token}, method="GET")
+    try:
+        with request.urlopen(http_request, timeout=20) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except (error.URLError, OSError, ValueError):
+        raise HTTPException(502, "The payment provider order could not be fetched.") from None

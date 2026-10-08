@@ -5,7 +5,7 @@
  * What it is: Small fetch helpers for auth and learner course endpoints.
  */
 
-const API_BASE_URL =
+export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
 
 async function parseJsonResponse(response) {
@@ -27,7 +27,9 @@ async function parseJsonResponse(response) {
       (typeof detail === "string" ? detail : "") ||
       data?.message ||
       "The request could not be completed.";
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
   }
 
   return data;
@@ -190,12 +192,22 @@ export async function fetchQuizRequest(courseId, contentId, token) {
   return parseJsonResponse(response);
 }
 
-export async function submitQuizAttemptRequest(courseId, contentId, token, payload) {
+export async function fetchQuizSubmissionCapabilitiesRequest(token) {
+  const response = await fetch(`${API_BASE_URL}/courses/quiz-submissions/capabilities`, {
+    headers: buildHeaders(token),
+  });
+  return parseJsonResponse(response);
+}
+
+export async function submitQuizAttemptRequest(courseId, contentId, token, payload, submissionKey) {
   const response = await fetch(
     `${API_BASE_URL}/courses/${courseId}/quizzes/${contentId}/attempts`,
     {
       method: "POST",
-      headers: buildHeaders(token),
+      headers: {
+        ...buildHeaders(token),
+        ...(submissionKey ? { "Idempotency-Key": submissionKey } : {}),
+      },
       body: JSON.stringify(payload),
     },
   );

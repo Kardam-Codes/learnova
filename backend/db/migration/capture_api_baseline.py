@@ -101,7 +101,9 @@ def main() -> None:
                                  "phase4-postgres-api-baseline.json", "phase4-mongo-api-baseline.json",
                                  "phase5-postgres-api-baseline.json", "phase5-mongo-api-baseline.json",
                                  "phase6-postgres-api-baseline.json", "phase6-mongo-api-baseline.json",
-                                 "phase7-postgres-api-baseline.json", "phase7-mongo-api-baseline.json"])
+                                 "phase7-postgres-api-baseline.json", "phase7-mongo-api-baseline.json",
+                                 "phase8-postgres-api-baseline.json", "phase8-mongo-api-baseline.json",
+                                 "phase11-postgres-api-baseline.json", "phase11-mongo-api-baseline.json"])
     arguments = parser.parse_args()
     run = arguments.run_directory.resolve()
     private_root = (ROOT / ".local" / "migration-baseline").resolve()
