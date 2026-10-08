@@ -1,0 +1,2021 @@
+{
+  "spec_version": 1,
+  "status": "phase_1_design_live_mongodb_validation_pending",
+  "source_snapshot": "20261007T122950131750Z",
+  "retention": "Preserve all existing records and access, confirmed by user.",
+  "domain_collections": [
+    "content_progress",
+    "course_content",
+    "course_progress",
+    "courses",
+    "enrollments",
+    "learner_points",
+    "payment_orders",
+    "point_events",
+    "quiz_attempts",
+    "quizzes",
+    "reviews",
+    "tags",
+    "users"
+  ],
+  "operational_collections": [
+    "app_metadata",
+    "quiz_attempt_counters",
+    "schema_migrations"
+  ],
+  "source_mapping": {
+    "users": {
+      "collection": "users",
+      "fields": {
+        "id": "users._id",
+        "name": "users.name",
+        "email": "users.email",
+        "password_hash": "users.password_hash",
+        "role": "users.role",
+        "provider": "users.provider",
+        "google_id": "users.google_id",
+        "is_active": "users.is_active",
+        "created_at": "users.created_at",
+        "updated_at": "users.updated_at"
+      }
+    },
+    "courses": {
+      "collection": "courses",
+      "rename": {
+        "price": "price_paise"
+      },
+      "fields": {
+        "id": "courses._id",
+        "slug": "courses.slug",
+        "title": "courses.title",
+        "short_description": "courses.short_description",
+        "description": "courses.description",
+        "thumbnail_url": "courses.thumbnail_url",
+        "cover_image_url": "courses.cover_image_url",
+        "website_id": "courses.website_id",
+        "visibility": "courses.visibility",
+        "access_rule": "courses.access_rule",
+        "price": "courses.price_paise",
+        "is_published": "courses.is_published",
+        "created_by": "courses.created_by",
+        "responsible_user_id": "courses.responsible_user_id",
+        "created_at": "courses.created_at",
+        "updated_at": "courses.updated_at"
+      }
+    },
+    "course_tags": {
+      "collection": "tags",
+      "fields": {
+        "id": "tags._id",
+        "name": "tags.name",
+        "created_at": "tags.created_at"
+      }
+    },
+    "course_tag_map": {
+      "collection": "courses",
+      "array": "tags",
+      "parent": "course_id",
+      "fields": {
+        "id": "courses.tags[].id",
+        "course_id": "reconstructed from enclosing parent id",
+        "tag_id": "courses.tags[].tag_id"
+      }
+    },
+    "course_attendees": {
+      "collection": "enrollments",
+      "fields": {
+        "id": "enrollments._id",
+        "course_id": "enrollments.course_id",
+        "user_id": "enrollments.user_id",
+        "enrolled_at": "enrollments.enrolled_at",
+        "enrollment_source": "enrollments.enrollment_source",
+        "payment_status": "enrollments.payment_status"
+      }
+    },
+    "course_content": {
+      "collection": "course_content",
+      "fields": {
+        "id": "course_content._id",
+        "course_id": "course_content.course_id",
+        "slug": "course_content.slug",
+        "title": "course_content.title",
+        "content_type": "course_content.content_type",
+        "content_mode": "course_content.content_mode",
+        "description": "course_content.description",
+        "content_url": "course_content.content_url",
+        "allow_download": "course_content.allow_download",
+        "duration_label": "course_content.duration_label",
+        "display_order": "course_content.display_order",
+        "responsible_user_id": "course_content.responsible_user_id",
+        "created_at": "course_content.created_at",
+        "updated_at": "course_content.updated_at"
+      }
+    },
+    "content_attachments": {
+      "collection": "course_content",
+      "array": "attachments",
+      "parent": "content_id",
+      "fields": {
+        "id": "course_content.attachments[].id",
+        "content_id": "reconstructed from enclosing parent id",
+        "attachment_type": "course_content.attachments[].attachment_type",
+        "label": "course_content.attachments[].label",
+        "url": "course_content.attachments[].url",
+        "created_at": "course_content.attachments[].created_at"
+      }
+    },
+    "quizzes": {
+      "collection": "quizzes",
+      "fields": {
+        "id": "quizzes._id",
+        "course_id": "quizzes.course_id",
+        "content_id": "quizzes.content_id",
+        "title": "quizzes.title",
+        "max_attempts": "quizzes.max_attempts",
+        "created_at": "quizzes.created_at",
+        "updated_at": "quizzes.updated_at"
+      }
+    },
+    "quiz_questions": {
+      "collection": "quizzes",
+      "array": "questions",
+      "parent": "quiz_id",
+      "fields": {
+        "id": "quizzes.questions[].id",
+        "quiz_id": "reconstructed from enclosing parent id",
+        "question_text": "quizzes.questions[].question_text",
+        "display_order": "quizzes.questions[].display_order",
+        "created_at": "quizzes.questions[].created_at",
+        "updated_at": "quizzes.questions[].updated_at"
+      }
+    },
+    "quiz_options": {
+      "collection": "quizzes",
+      "array": "questions[].options",
+      "parent": "question_id",
+      "fields": {
+        "id": "quizzes.questions[].options[].id",
+        "question_id": "reconstructed from enclosing parent id",
+        "option_text": "quizzes.questions[].options[].option_text",
+        "is_correct": "quizzes.questions[].options[].is_correct",
+        "display_order": "quizzes.questions[].options[].display_order"
+      }
+    },
+    "quiz_reward_rules": {
+      "collection": "quizzes",
+      "array": "reward_rules",
+      "parent": "quiz_id",
+      "fields": {
+        "id": "quizzes.reward_rules[].id",
+        "quiz_id": "reconstructed from enclosing parent id",
+        "attempt_number": "quizzes.reward_rules[].attempt_number",
+        "points_awarded": "quizzes.reward_rules[].points_awarded"
+      }
+    },
+    "quiz_attempts": {
+      "collection": "quiz_attempts",
+      "fields": {
+        "id": "quiz_attempts._id",
+        "quiz_id": "quiz_attempts.quiz_id",
+        "user_id": "quiz_attempts.user_id",
+        "attempt_number": "quiz_attempts.attempt_number",
+        "score": "quiz_attempts.score",
+        "points_earned": "quiz_attempts.points_earned",
+        "submitted_at": "quiz_attempts.submitted_at"
+      }
+    },
+    "quiz_attempt_answers": {
+      "collection": "quiz_attempts",
+      "array": "answers",
+      "parent": "attempt_id",
+      "fields": {
+        "id": "quiz_attempts.answers[].id",
+        "attempt_id": "reconstructed from enclosing parent id",
+        "question_id": "quiz_attempts.answers[].question_id",
+        "selected_option_id": "quiz_attempts.answers[].selected_option_id",
+        "is_correct": "quiz_attempts.answers[].is_correct"
+      }
+    },
+    "course_progress": {
+      "collection": "course_progress",
+      "fields": {
+        "id": "course_progress._id",
+        "course_id": "course_progress.course_id",
+        "user_id": "course_progress.user_id",
+        "completion_percentage": "course_progress.completion_percentage",
+        "completed_count": "course_progress.completed_count",
+        "incomplete_count": "course_progress.incomplete_count",
+        "current_content_id": "course_progress.current_content_id",
+        "status": "course_progress.status",
+        "started_at": "course_progress.started_at",
+        "completed_at": "course_progress.completed_at",
+        "updated_at": "course_progress.updated_at"
+      }
+    },
+    "content_progress": {
+      "collection": "content_progress",
+      "fields": {
+        "id": "content_progress._id",
+        "content_id": "content_progress.content_id",
+        "course_id": "content_progress.course_id",
+        "user_id": "content_progress.user_id",
+        "status": "content_progress.status",
+        "last_position": "content_progress.last_position",
+        "completed_at": "content_progress.completed_at",
+        "updated_at": "content_progress.updated_at"
+      }
+    },
+    "learner_points": {
+      "collection": "learner_points",
+      "fields": {
+        "id": "learner_points._id",
+        "user_id": "learner_points.user_id",
+        "total_points": "learner_points.total_points",
+        "current_badge": "learner_points.current_badge",
+        "updated_at": "learner_points.updated_at"
+      }
+    },
+    "point_events": {
+      "collection": "point_events",
+      "fields": {
+        "id": "point_events._id",
+        "user_id": "point_events.user_id",
+        "course_id": "point_events.course_id",
+        "quiz_id": "point_events.quiz_id",
+        "points_delta": "point_events.points_delta",
+        "reason": "point_events.reason",
+        "created_at": "point_events.created_at"
+      }
+    },
+    "course_reviews": {
+      "collection": "reviews",
+      "fields": {
+        "id": "reviews._id",
+        "course_id": "reviews.course_id",
+        "user_id": "reviews.user_id",
+        "rating": "reviews.rating",
+        "comment": "reviews.comment",
+        "created_at": "reviews.created_at",
+        "updated_at": "reviews.updated_at"
+      }
+    },
+    "course_payment_orders": {
+      "collection": "payment_orders",
+      "fields": {
+        "id": "payment_orders._id",
+        "course_id": "payment_orders.course_id",
+        "user_id": "payment_orders.user_id",
+        "provider": "payment_orders.provider",
+        "provider_order_id": "payment_orders.provider_order_id",
+        "provider_payment_id": "payment_orders.provider_payment_id",
+        "amount_paise": "payment_orders.amount_paise",
+        "currency": "payment_orders.currency",
+        "status": "payment_orders.status",
+        "receipt": "payment_orders.receipt",
+        "created_at": "payment_orders.created_at",
+        "verified_at": "payment_orders.verified_at"
+      }
+    }
+  },
+  "collections": {
+    "users": {
+      "validator": {
+        "$and": [
+          {
+            "$jsonSchema": {
+              "bsonType": "object",
+              "required": [
+                "_id",
+                "name",
+                "email",
+                "role",
+                "provider",
+                "is_active",
+                "created_at",
+                "updated_at",
+                "schema_version"
+              ],
+              "properties": {
+                "_id": {
+                  "bsonType": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                "name": {
+                  "bsonType": "string"
+                },
+                "email": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "password_hash": {
+                  "bsonType": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "role": {
+                  "bsonType": "string",
+                  "enum": [
+                    "super_admin",
+                    "admin",
+                    "instructor",
+                    "learner"
+                  ]
+                },
+                "provider": {
+                  "bsonType": "string",
+                  "enum": [
+                    "local",
+                    "google"
+                  ]
+                },
+                "google_id": {
+                  "bsonType": "string",
+                  "minLength": 1
+                },
+                "is_active": {
+                  "bsonType": "bool"
+                },
+                "created_at": {
+                  "bsonType": "date"
+                },
+                "updated_at": {
+                  "bsonType": "date"
+                },
+                "schema_version": {
+                  "bsonType": "int",
+                  "enum": [
+                    1
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          {
+            "$or": [
+              {
+                "provider": "local",
+                "password_hash": {
+                  "$type": "string"
+                }
+              },
+              {
+                "provider": "google",
+                "google_id": {
+                  "$type": "string"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "validationLevel": "strict",
+      "validationAction": "error",
+      "indexes": [
+        {
+          "name": "uq_users_email",
+          "keys": [
+            [
+              "email",
+              1
+            ]
+          ],
+          "unique": true
+        },
+        {
+          "name": "uq_users_google_id",
+          "keys": [
+            [
+              "google_id",
+              1
+            ]
+          ],
+          "unique": true,
+          "partialFilterExpression": {
+            "google_id": {
+              "$type": "string"
+            }
+          }
+        },
+        {
+          "name": "ix_users_role",
+          "keys": [
+            [
+              "role",
+              1
+            ]
+          ]
+        }
+      ]
+    },
+    "courses": {
+      "validator": {
+        "$and": [
+          {
+            "$jsonSchema": {
+              "bsonType": "object",
+              "required": [
+                "_id",
+                "slug",
+                "title",
+                "short_description",
+                "visibility",
+                "access_rule",
+                "price_paise",
+                "is_published",
+                "created_at",
+                "updated_at",
+                "schema_version",
+                "tags",
+                "currency"
+              ],
+              "properties": {
+                "_id": {
+                  "bsonType": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                "slug": {
+                  "bsonType": "string"
+                },
+                "title": {
+                  "bsonType": "string"
+                },
+                "short_description": {
+                  "bsonType": "string"
+                },
+                "description": {
+                  "bsonType": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "thumbnail_url": {
+                  "bsonType": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "cover_image_url": {
+                  "bsonType": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "website_id": {
+                  "bsonType": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "visibility": {
+                  "bsonType": "string",
+                  "enum": [
+                    "everyone",
+                    "signed_in"
+                  ]
+                },
+                "access_rule": {
+                  "bsonType": "string",
+                  "enum": [
+                    "open",
+                    "invitation",
+                    "payment"
+                  ]
+                },
+                "price_paise": {
+                  "bsonType": [
+                    "int",
+                    "long"
+                  ],
+                  "minimum": 0
+                },
+                "is_published": {
+                  "bsonType": "bool"
+                },
+                "created_by": {
+                  "bsonType": [
+                    "string",
+                    "null"
+                  ],
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                "responsible_user_id": {
+                  "bsonType": [
+                    "string",
+                    "null"
+                  ],
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                "created_at": {
+                  "bsonType": "date"
+                },
+                "updated_at": {
+                  "bsonType": "date"
+                },
+                "schema_version": {
+                  "bsonType": "int",
+                  "enum": [
+                    1
+                  ]
+                },
+                "tags": {
+                  "bsonType": "array",
+                  "items": {
+                    "bsonType": "object",
+                    "required": [
+                      "id",
+                      "tag_id",
+                      "name"
+                    ],
+                    "properties": {
+                      "id": {
+                        "bsonType": "string",
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                      },
+                      "tag_id": {
+                        "bsonType": "string",
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                      },
+                      "name": {
+                        "bsonType": "string"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "currency": {
+                  "bsonType": "string",
+                  "enum": [
+                    "INR"
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          {
+            "$or": [
+              {
+                "access_rule": {
+                  "$ne": "payment"
+                }
+              },
+              {
+                "price_paise": {
+                  "$gt": 0
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "validationLevel": "strict",
+      "validationAction": "error",
+      "indexes": [
+        {
+          "name": "uq_courses_slug",
+          "keys": [
+            [
+              "slug",
+              1
+            ]
+          ],
+          "unique": true
+        },
+        {
+          "name": "ix_courses_published_visibility",
+          "keys": [
+            [
+              "is_published",
+              1
+            ],
+            [
+              "visibility",
+              1
+            ]
+          ]
+        }
+      ]
+    },
+    "tags": {
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": [
+            "_id",
+            "name",
+            "created_at",
+            "schema_version",
+            "normalized_name"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "name": {
+              "bsonType": "string"
+            },
+            "created_at": {
+              "bsonType": "date"
+            },
+            "schema_version": {
+              "bsonType": "int",
+              "enum": [
+                1
+              ]
+            },
+            "normalized_name": {
+              "bsonType": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "validationLevel": "strict",
+      "validationAction": "error",
+      "indexes": [
+        {
+          "name": "uq_tags_normalized_name",
+          "keys": [
+            [
+              "normalized_name",
+              1
+            ]
+          ],
+          "unique": true
+        }
+      ]
+    },
+    "enrollments": {
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": [
+            "_id",
+            "course_id",
+            "user_id",
+            "enrolled_at",
+            "enrollment_source",
+            "payment_status",
+            "schema_version"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "course_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "user_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "enrolled_at": {
+              "bsonType": "date"
+            },
+            "enrollment_source": {
+              "bsonType": "string",
+              "enum": [
+                "self",
+                "invited",
+                "admin_added"
+              ]
+            },
+            "payment_status": {
+              "bsonType": "string",
+              "enum": [
+                "not_required",
+                "pending",
+                "paid"
+              ]
+            },
+            "schema_version": {
+              "bsonType": "int",
+              "enum": [
+                1
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "validationLevel": "strict",
+      "validationAction": "error",
+      "indexes": [
+        {
+          "name": "uq_enrollments_course_user",
+          "keys": [
+            [
+              "course_id",
+              1
+            ],
+            [
+              "user_id",
+              1
+            ]
+          ],
+          "unique": true
+        },
+        {
+          "name": "ix_enrollments_user_course",
+          "keys": [
+            [
+              "user_id",
+              1
+            ],
+            [
+              "course_id",
+              1
+            ]
+          ]
+        }
+      ]
+    },
+    "course_content": {
+      "validator": {
+        "$and": [
+          {
+            "$jsonSchema": {
+              "bsonType": "object",
+              "required": [
+                "_id",
+                "course_id",
+                "slug",
+                "title",
+                "content_type",
+                "content_mode",
+                "allow_download",
+                "display_order",
+                "created_at",
+                "updated_at",
+                "schema_version",
+                "attachments"
+              ],
+              "properties": {
+                "_id": {
+                  "bsonType": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                "course_id": {
+                  "bsonType": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                "slug": {
+                  "bsonType": "string"
+                },
+                "title": {
+                  "bsonType": "string"
+                },
+                "content_type": {
+                  "bsonType": "string",
+                  "enum": [
+                    "lesson",
+                    "quiz"
+                  ]
+                },
+                "content_mode": {
+                  "bsonType": "string",
+                  "enum": [
+                    "video",
+                    "document",
+                    "image",
+                    "quiz"
+                  ]
+                },
+                "description": {
+                  "bsonType": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "content_url": {
+                  "bsonType": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "allow_download": {
+                  "bsonType": "bool"
+                },
+                "duration_label": {
+                  "bsonType": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "display_order": {
+                  "bsonType": [
+                    "int",
+                    "long"
+                  ],
+                  "minimum": 1
+                },
+                "responsible_user_id": {
+                  "bsonType": [
+                    "string",
+                    "null"
+                  ],
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                },
+                "created_at": {
+                  "bsonType": "date"
+                },
+                "updated_at": {
+                  "bsonType": "date"
+                },
+                "schema_version": {
+                  "bsonType": "int",
+                  "enum": [
+                    1
+                  ]
+                },
+                "attachments": {
+                  "bsonType": "array",
+                  "items": {
+                    "bsonType": "object",
+                    "required": [
+                      "id",
+                      "attachment_type",
+                      "label",
+                      "url",
+                      "created_at"
+                    ],
+                    "properties": {
+                      "id": {
+                        "bsonType": "string",
+                        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                      },
+                      "attachment_type": {
+                        "bsonType": "string",
+                        "enum": [
+                          "file",
+                          "link"
+                        ]
+                      },
+                      "label": {
+                        "bsonType": "string"
+                      },
+                      "url": {
+                        "bsonType": "string"
+                      },
+                      "created_at": {
+                        "bsonType": "date"
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          {
+            "$or": [
+              {
+                "content_type": "quiz",
+                "content_mode": "quiz"
+              },
+              {
+                "content_type": "lesson",
+                "content_mode": {
+                  "$in": [
+                    "video",
+                    "document",
+                    "image"
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "validationLevel": "strict",
+      "validationAction": "error",
+      "indexes": [
+        {
+          "name": "uq_content_course_slug",
+          "keys": [
+            [
+              "course_id",
+              1
+            ],
+            [
+              "slug",
+              1
+            ]
+          ],
+          "unique": true
+        },
+        {
+          "name": "uq_content_course_order",
+          "keys": [
+            [
+              "course_id",
+              1
+            ],
+            [
+              "display_order",
+              1
+            ]
+          ],
+          "unique": true
+        }
+      ]
+    },
+    "quizzes": {
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": [
+            "_id",
+            "course_id",
+            "content_id",
+            "title",
+            "max_attempts",
+            "created_at",
+            "updated_at",
+            "schema_version",
+            "questions",
+            "reward_rules",
+            "version"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "course_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "content_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "title": {
+              "bsonType": "string"
+            },
+            "max_attempts": {
+              "bsonType": [
+                "int",
+                "long"
+              ],
+              "minimum": 1
+            },
+            "created_at": {
+              "bsonType": "date"
+            },
+            "updated_at": {
+              "bsonType": "date"
+            },
+            "schema_version": {
+              "bsonType": "int",
+              "enum": [
+                1
+              ]
+            },
+            "questions": {
+              "bsonType": "array",
+              "items": {
+                "bsonType": "object",
+                "required": [
+                  "id",
+                  "question_text",
+                  "display_order",
+                  "created_at",
+                  "updated_at",
+                  "options"
+                ],
+                "properties": {
+                  "id": {
+                    "bsonType": "string",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                  },
+                  "question_text": {
+                    "bsonType": "string"
+                  },
+                  "display_order": {
+                    "bsonType": [
+                      "int",
+                      "long"
+                    ],
+                    "minimum": 1
+                  },
+                  "created_at": {
+                    "bsonType": "date"
+                  },
+                  "updated_at": {
+                    "bsonType": "date"
+                  },
+                  "options": {
+                    "bsonType": "array",
+                    "items": {
+                      "bsonType": "object",
+                      "required": [
+                        "id",
+                        "option_text",
+                        "is_correct",
+                        "display_order"
+                      ],
+                      "properties": {
+                        "id": {
+                          "bsonType": "string",
+                          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                        },
+                        "option_text": {
+                          "bsonType": "string"
+                        },
+                        "is_correct": {
+                          "bsonType": "bool"
+                        },
+                        "display_order": {
+                          "bsonType": [
+                            "int",
+                            "long"
+                          ],
+                          "minimum": 1
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "reward_rules": {
+              "bsonType": "array",
+              "items": {
+                "bsonType": "object",
+                "required": [
+                  "id",
+                  "attempt_number",
+                  "points_awarded"
+                ],
+                "properties": {
+                  "id": {
+                    "bsonType": "string",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                  },
+                  "attempt_number": {
+                    "bsonType": [
+                      "int",
+                      "long"
+                    ],
+                    "minimum": 1
+                  },
+                  "points_awarded": {
+                    "bsonType": [
+                      "int",
+                      "long"
+                    ],
+                    "minimum": 0
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "version": {
+              "bsonType": "int",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "validationLevel": "strict",
+      "validationAction": "error",
+      "indexes": [
+        {
+          "name": "uq_quizzes_content",
+          "keys": [
+            [
+              "content_id",
+              1
+            ]
+          ],
+          "unique": true
+        },
+        {
+          "name": "ix_quizzes_course",
+          "keys": [
+            [
+              "course_id",
+              1
+            ]
+          ]
+        }
+      ]
+    },
+    "quiz_attempts": {
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": [
+            "_id",
+            "quiz_id",
+            "user_id",
+            "attempt_number",
+            "score",
+            "points_earned",
+            "submitted_at",
+            "schema_version",
+            "answers"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "quiz_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "user_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "attempt_number": {
+              "bsonType": [
+                "int",
+                "long"
+              ],
+              "minimum": 1
+            },
+            "score": {
+              "bsonType": "double",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "points_earned": {
+              "bsonType": [
+                "int",
+                "long"
+              ],
+              "minimum": 0
+            },
+            "submitted_at": {
+              "bsonType": "date"
+            },
+            "schema_version": {
+              "bsonType": "int",
+              "enum": [
+                1
+              ]
+            },
+            "answers": {
+              "bsonType": "array",
+              "items": {
+                "bsonType": "object",
+                "required": [
+                  "id",
+                  "question_id",
+                  "selected_option_id",
+                  "is_correct"
+                ],
+                "properties": {
+                  "id": {
+                    "bsonType": "string",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                  },
+                  "question_id": {
+                    "bsonType": "string",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                  },
+                  "selected_option_id": {
+                    "bsonType": "string",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+                  },
+                  "is_correct": {
+                    "bsonType": "bool"
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "quiz_version": {
+              "bsonType": [
+                "int",
+                "null"
+              ],
+              "minimum": 1
+            },
+            "course_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "content_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "submission_key": {
+              "bsonType": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "submission_fingerprint": {
+              "bsonType": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "validationLevel": "strict",
+      "validationAction": "error",
+      "indexes": [
+        {
+          "name": "uq_attempt_number",
+          "keys": [
+            [
+              "quiz_id",
+              1
+            ],
+            [
+              "user_id",
+              1
+            ],
+            [
+              "attempt_number",
+              1
+            ]
+          ],
+          "unique": true
+        },
+        {
+          "name": "uq_attempt_submission",
+          "keys": [
+            [
+              "quiz_id",
+              1
+            ],
+            [
+              "user_id",
+              1
+            ],
+            [
+              "submission_key",
+              1
+            ]
+          ],
+          "unique": true,
+          "partialFilterExpression": {
+            "submission_key": {
+              "$type": "string"
+            }
+          }
+        },
+        {
+          "name": "ix_attempts_user_submitted",
+          "keys": [
+            [
+              "user_id",
+              1
+            ],
+            [
+              "submitted_at",
+              -1
+            ]
+          ]
+        }
+      ]
+    },
+    "course_progress": {
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": [
+            "_id",
+            "course_id",
+            "user_id",
+            "completion_percentage",
+            "completed_count",
+            "incomplete_count",
+            "status",
+            "updated_at",
+            "schema_version"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "course_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "user_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "completion_percentage": {
+              "bsonType": "double",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "completed_count": {
+              "bsonType": [
+                "int",
+                "long"
+              ],
+              "minimum": 0
+            },
+            "incomplete_count": {
+              "bsonType": [
+                "int",
+                "long"
+              ],
+              "minimum": 0
+            },
+            "current_content_id": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "status": {
+              "bsonType": "string",
+              "enum": [
+                "yet_to_start",
+                "in_progress",
+                "completed"
+              ]
+            },
+            "started_at": {
+              "bsonType": [
+                "date",
+                "null"
+              ]
+            },
+            "completed_at": {
+              "bsonType": [
+                "date",
+                "null"
+              ]
+            },
+            "updated_at": {
+              "bsonType": "date"
+            },
+            "schema_version": {
+              "bsonType": "int",
+              "enum": [
+                1
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "validationLevel": "strict",
+      "validationAction": "error",
+      "indexes": [
+        {
+          "name": "uq_progress_course_user",
+          "keys": [
+            [
+              "course_id",
+              1
+            ],
+            [
+              "user_id",
+              1
+            ]
+          ],
+          "unique": true
+        },
+        {
+          "name": "ix_course_progress_user",
+          "keys": [
+            [
+              "user_id",
+              1
+            ]
+          ]
+        }
+      ]
+    },
+    "content_progress": {
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": [
+            "_id",
+            "content_id",
+            "course_id",
+            "user_id",
+            "status",
+            "last_position",
+            "updated_at",
+            "schema_version"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "content_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "course_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "user_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "status": {
+              "bsonType": "string",
+              "enum": [
+                "not_started",
+                "in_progress",
+                "completed"
+              ]
+            },
+            "last_position": {
+              "bsonType": [
+                "int",
+                "long"
+              ],
+              "minimum": 0
+            },
+            "completed_at": {
+              "bsonType": [
+                "date",
+                "null"
+              ]
+            },
+            "updated_at": {
+              "bsonType": "date"
+            },
+            "schema_version": {
+              "bsonType": "int",
+              "enum": [
+                1
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "validationLevel": "strict",
+      "validationAction": "error",
+      "indexes": [
+        {
+          "name": "uq_progress_content_user",
+          "keys": [
+            [
+              "content_id",
+              1
+            ],
+            [
+              "user_id",
+              1
+            ]
+          ],
+          "unique": true
+        },
+        {
+          "name": "ix_content_progress_course_user",
+          "keys": [
+            [
+              "course_id",
+              1
+            ],
+            [
+              "user_id",
+              1
+            ]
+          ]
+        }
+      ]
+    },
+    "learner_points": {
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": [
+            "_id",
+            "user_id",
+            "total_points",
+            "current_badge",
+            "updated_at",
+            "schema_version"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "user_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "total_points": {
+              "bsonType": [
+                "int",
+                "long"
+              ],
+              "minimum": 0
+            },
+            "current_badge": {
+              "bsonType": "string",
+              "enum": [
+                "Newbie",
+                "Explorer",
+                "Achiever",
+                "Specialist",
+                "Expert",
+                "Master"
+              ]
+            },
+            "updated_at": {
+              "bsonType": "date"
+            },
+            "schema_version": {
+              "bsonType": "int",
+              "enum": [
+                1
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "validationLevel": "strict",
+      "validationAction": "error",
+      "indexes": [
+        {
+          "name": "uq_points_user",
+          "keys": [
+            [
+              "user_id",
+              1
+            ]
+          ],
+          "unique": true
+        }
+      ]
+    },
+    "point_events": {
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": [
+            "_id",
+            "user_id",
+            "points_delta",
+            "reason",
+            "created_at",
+            "schema_version"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "user_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "course_id": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "quiz_id": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "points_delta": {
+              "bsonType": [
+                "int",
+                "long"
+              ]
+            },
+            "reason": {
+              "bsonType": "string"
+            },
+            "created_at": {
+              "bsonType": "date"
+            },
+            "schema_version": {
+              "bsonType": "int",
+              "enum": [
+                1
+              ]
+            },
+            "attempt_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "validationLevel": "strict",
+      "validationAction": "error",
+      "indexes": [
+        {
+          "name": "uq_point_events_attempt",
+          "keys": [
+            [
+              "attempt_id",
+              1
+            ]
+          ],
+          "unique": true,
+          "partialFilterExpression": {
+            "attempt_id": {
+              "$type": "string"
+            }
+          }
+        },
+        {
+          "name": "ix_point_events_user_created",
+          "keys": [
+            [
+              "user_id",
+              1
+            ],
+            [
+              "created_at",
+              -1
+            ]
+          ]
+        }
+      ]
+    },
+    "reviews": {
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": [
+            "_id",
+            "course_id",
+            "user_id",
+            "rating",
+            "comment",
+            "created_at",
+            "updated_at",
+            "schema_version"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "course_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "user_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "rating": {
+              "bsonType": [
+                "int",
+                "long"
+              ],
+              "minimum": 1,
+              "maximum": 5
+            },
+            "comment": {
+              "bsonType": "string"
+            },
+            "created_at": {
+              "bsonType": "date"
+            },
+            "updated_at": {
+              "bsonType": "date"
+            },
+            "schema_version": {
+              "bsonType": "int",
+              "enum": [
+                1
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "validationLevel": "strict",
+      "validationAction": "error",
+      "indexes": [
+        {
+          "name": "uq_reviews_course_user",
+          "keys": [
+            [
+              "course_id",
+              1
+            ],
+            [
+              "user_id",
+              1
+            ]
+          ],
+          "unique": true
+        },
+        {
+          "name": "ix_reviews_course_created",
+          "keys": [
+            [
+              "course_id",
+              1
+            ],
+            [
+              "created_at",
+              -1
+            ]
+          ]
+        }
+      ]
+    },
+    "payment_orders": {
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": [
+            "_id",
+            "course_id",
+            "user_id",
+            "provider",
+            "provider_order_id",
+            "amount_paise",
+            "currency",
+            "status",
+            "created_at",
+            "schema_version"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "course_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "user_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "provider": {
+              "bsonType": "string"
+            },
+            "provider_order_id": {
+              "bsonType": "string"
+            },
+            "provider_payment_id": {
+              "bsonType": "string",
+              "minLength": 1
+            },
+            "amount_paise": {
+              "bsonType": [
+                "int",
+                "long"
+              ],
+              "minimum": 1
+            },
+            "currency": {
+              "bsonType": "string"
+            },
+            "status": {
+              "bsonType": "string",
+              "enum": [
+                "created",
+                "paid",
+                "failed"
+              ]
+            },
+            "receipt": {
+              "bsonType": [
+                "string",
+                "null"
+              ]
+            },
+            "created_at": {
+              "bsonType": "date"
+            },
+            "verified_at": {
+              "bsonType": [
+                "date",
+                "null"
+              ]
+            },
+            "schema_version": {
+              "bsonType": "int",
+              "enum": [
+                1
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "validationLevel": "strict",
+      "validationAction": "error",
+      "indexes": [
+        {
+          "name": "uq_provider_order",
+          "keys": [
+            [
+              "provider_order_id",
+              1
+            ]
+          ],
+          "unique": true
+        },
+        {
+          "name": "uq_provider_payment",
+          "keys": [
+            [
+              "provider_payment_id",
+              1
+            ]
+          ],
+          "unique": true,
+          "partialFilterExpression": {
+            "provider_payment_id": {
+              "$type": "string"
+            }
+          }
+        },
+        {
+          "name": "ix_payments_user_course_created",
+          "keys": [
+            [
+              "user_id",
+              1
+            ],
+            [
+              "course_id",
+              1
+            ],
+            [
+              "created_at",
+              -1
+            ]
+          ]
+        }
+      ]
+    },
+    "app_metadata": {
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": [
+            "_id",
+            "schema_version",
+            "claimed",
+            "administrator_id",
+            "updated_at"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "enum": [
+                "auth_bootstrap"
+              ]
+            },
+            "schema_version": {
+              "bsonType": "int",
+              "enum": [
+                1
+              ]
+            },
+            "claimed": {
+              "bsonType": "bool"
+            },
+            "administrator_id": {
+              "bsonType": [
+                "string",
+                "null"
+              ],
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "updated_at": {
+              "bsonType": "date"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "validationLevel": "strict",
+      "validationAction": "error",
+      "indexes": []
+    },
+    "schema_migrations": {
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": [
+            "_id",
+            "version",
+            "checksum",
+            "applied_at"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string"
+            },
+            "version": {
+              "bsonType": "int",
+              "minimum": 1
+            },
+            "checksum": {
+              "bsonType": "string"
+            },
+            "applied_at": {
+              "bsonType": "date"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "validationLevel": "strict",
+      "validationAction": "error",
+      "indexes": []
+    },
+    "quiz_attempt_counters": {
+      "validator": {
+        "$jsonSchema": {
+          "bsonType": "object",
+          "required": [
+            "_id",
+            "schema_version",
+            "quiz_id",
+            "user_id",
+            "attempts_used",
+            "updated_at"
+          ],
+          "properties": {
+            "_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "schema_version": {
+              "bsonType": "int",
+              "enum": [
+                1
+              ]
+            },
+            "quiz_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "user_id": {
+              "bsonType": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+            },
+            "attempts_used": {
+              "bsonType": "int",
+              "minimum": 0
+            },
+            "updated_at": {
+              "bsonType": "date"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "validationLevel": "strict",
+      "validationAction": "error",
+      "indexes": [
+        {
+          "name": "uq_counter_quiz_user",
+          "keys": [
+            [
+              "quiz_id",
+              1
+            ],
+            [
+              "user_id",
+              1
+            ]
+          ],
+          "unique": true
+        }
+      ]
+    }
+  },
+  "notes": [
+    "Do not apply this specification to the existing MongoDB service during Phase 1.",
+    "Nullable google_id and provider_payment_id are omitted when absent; other SQL nullable fields may be null.",
+    "Prices are converted with decimal arithmetic into integer paise; API price remains unchanged.",
+    "Empty quizzes are preserved. Submission readiness and distinct embedded IDs require service checks.",
+    "No new arbitrary quiz/attachment count limits are introduced; enforce MongoDB BSON document size before writes.",
+    "Legacy quiz versions are unknown; retain null rather than inventing a historical version."
+  ]
+}

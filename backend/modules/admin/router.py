@@ -1,0 +1,314 @@
+"""
+File: router.py
+Owner: BOTH CAN ADD
+Created: 2026-03-21
+Project: Learnova (eLearning Platform)
+Purpose: Expose instructor/admin APIs for course management and attendees.
+What it is: FastAPI routes for course CRUD, publish toggles, and attendee invitations.
+"""
+
+from __future__ import annotations
+
+from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
+from backend.modules.admin.storage import get_admin_service
+
+from backend.modules.admin.schemas import (
+    AddAttendeesRequest,
+    AdminContentCreateRequest,
+    AdminContentUpdateRequest,
+    AdminQuizCreateRequest,
+    AdminQuizUpdateRequest,
+    CourseCreateRequest,
+    CourseUpdateRequest,
+    PublishCourseRequest,
+)
+from backend.modules.admin.service import get_reporting_course_progress, save_admin_upload
+from backend.modules.auth.dependencies import require_roles
+
+
+router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+AdminOrInstructor = require_roles("admin", "instructor")
+
+
+@router.get("/reports/course-progress")
+def get_course_progress_report(
+    status: str | None = None,
+    _current_user: dict = Depends(AdminOrInstructor),
+):
+    """
+    This returns reporting summary cards and course-wise learner progress rows.
+    """
+
+    return get_reporting_course_progress(status)
+
+
+@router.get("/users")
+def get_admin_users(
+    roles: str | None = None,
+    _current_user: dict = Depends(AdminOrInstructor),
+    admin=Depends(get_admin_service),
+):
+    """
+    This returns admin/instructor user records for responsible-user dropdowns.
+    """
+
+    role_list = [role.strip() for role in roles.split(",")] if roles else None
+    return admin.list_admin_users(role_list)
+
+
+@router.post("/uploads")
+async def upload_admin_file(
+    request: Request,
+    category: str = Form("attachments"),
+    file: UploadFile = File(...),
+    _current_user: dict = Depends(AdminOrInstructor),
+):
+    """
+    This stores a local uploaded asset and returns its served URL.
+    """
+
+    file_bytes = await file.read()
+    return save_admin_upload(file.filename or "upload.bin", file_bytes, category, str(request.base_url))
+
+
+@router.get("/courses")
+def get_admin_courses(current_user: dict = Depends(AdminOrInstructor), admin=Depends(get_admin_service)):
+    """
+    This returns the instructor/admin course list for backoffice views.
+    """
+
+    return admin.list_admin_courses(current_user)
+
+
+@router.post("/courses")
+def post_admin_course(
+    payload: CourseCreateRequest,
+    current_user: dict = Depends(AdminOrInstructor),
+    admin=Depends(get_admin_service),
+):
+    """
+    This creates a new course record and attaches its initial tags.
+    """
+
+    return admin.create_admin_course(current_user, payload.model_dump())
+
+
+@router.get("/courses/{course_slug}")
+def get_admin_course_detail(
+    course_slug: str,
+    _current_user: dict = Depends(AdminOrInstructor),
+    admin=Depends(get_admin_service),
+):
+    """
+    This returns one course record for the instructor course form.
+    """
+
+    return admin.get_admin_course(course_slug)
+
+
+@router.put("/courses/{course_slug}")
+def put_admin_course(
+    course_slug: str,
+    payload: CourseUpdateRequest,
+    _current_user: dict = Depends(AdminOrInstructor),
+    admin=Depends(get_admin_service),
+):
+    """
+    This updates the editable course fields and course tags.
+    """
+
+    return admin.update_admin_course(course_slug, payload.model_dump())
+
+
+@router.delete("/courses/{course_slug}")
+def delete_course(
+    course_slug: str,
+    _current_user: dict = Depends(AdminOrInstructor),
+    admin=Depends(get_admin_service),
+):
+    """
+    This deletes a course and its dependent rows through database cascades.
+    """
+
+    return admin.delete_admin_course(course_slug)
+
+
+@router.post("/courses/{course_slug}/publish")
+def publish_course(
+    course_slug: str,
+    payload: PublishCourseRequest,
+    _current_user: dict = Depends(AdminOrInstructor),
+    admin=Depends(get_admin_service),
+):
+    """
+    This toggles the publish state used by the website/app visibility flow.
+    """
+
+    return admin.set_course_publish_state(course_slug, payload.isPublished)
+
+
+@router.get("/courses/{course_slug}/attendees")
+def get_attendees(
+    course_slug: str,
+    _current_user: dict = Depends(AdminOrInstructor),
+    admin=Depends(get_admin_service),
+):
+    """
+    This returns the attendee list for the selected course.
+    """
+
+    return admin.list_course_attendees(course_slug)
+
+
+@router.post("/courses/{course_slug}/attendees")
+def post_attendees(
+    course_slug: str,
+    payload: AddAttendeesRequest,
+    _current_user: dict = Depends(AdminOrInstructor),
+    admin=Depends(get_admin_service),
+):
+    """
+    This adds or updates attendee enrollments and supports invitation/admin-added flows.
+    """
+
+    attendee_payload = [attendee.model_dump() for attendee in payload.attendees]
+    return admin.add_course_attendees(course_slug, attendee_payload)
+
+
+@router.get("/courses/{course_slug}/content")
+def get_course_content_list(
+    course_slug: str,
+    _current_user: dict = Depends(AdminOrInstructor),
+    admin=Depends(get_admin_service),
+):
+    """
+    This returns the ordered course content list for the instructor content tab.
+    """
+
+    return admin.list_course_content(course_slug)
+
+
+@router.post("/courses/{course_slug}/content")
+def post_course_content(
+    course_slug: str,
+    payload: AdminContentCreateRequest,
+    _current_user: dict = Depends(AdminOrInstructor),
+    admin=Depends(get_admin_service),
+):
+    """
+    This creates a lesson/content item for the selected course.
+    """
+
+    return admin.create_course_content(course_slug, payload.model_dump())
+
+
+@router.get("/content/{content_slug}")
+def get_content(
+    content_slug: str,
+    _current_user: dict = Depends(AdminOrInstructor),
+    course_slug: str | None = Query(default=None, alias="courseSlug"),
+    admin=Depends(get_admin_service),
+):
+    """
+    This returns one content record for the content editor.
+    """
+
+    return admin.get_content_detail(content_slug, course_slug=course_slug)
+
+
+@router.put("/content/{content_slug}")
+def put_content(
+    content_slug: str,
+    payload: AdminContentUpdateRequest,
+    _current_user: dict = Depends(AdminOrInstructor),
+    course_slug: str | None = Query(default=None, alias="courseSlug"),
+    admin=Depends(get_admin_service),
+):
+    """
+    This updates an existing lesson/content item.
+    """
+
+    return admin.update_course_content(content_slug, payload.model_dump(), course_slug=course_slug)
+
+
+@router.delete("/content/{content_slug}")
+def delete_content(
+    content_slug: str,
+    _current_user: dict = Depends(AdminOrInstructor),
+    course_slug: str | None = Query(default=None, alias="courseSlug"),
+    admin=Depends(get_admin_service),
+):
+    """
+    This deletes a lesson/content item.
+    """
+
+    return admin.delete_course_content(content_slug, course_slug=course_slug)
+
+
+@router.get("/courses/{course_slug}/quizzes")
+def get_quizzes(
+    course_slug: str,
+    _current_user: dict = Depends(AdminOrInstructor),
+    admin=Depends(get_admin_service),
+):
+    """
+    This returns the quiz list for the selected course.
+    """
+
+    return admin.list_course_quizzes(course_slug)
+
+
+@router.post("/courses/{course_slug}/quizzes")
+def post_quiz(
+    course_slug: str,
+    payload: AdminQuizCreateRequest,
+    _current_user: dict = Depends(AdminOrInstructor),
+    admin=Depends(get_admin_service),
+):
+    """
+    This creates a quiz content item and its builder data.
+    """
+
+    return admin.create_course_quiz(course_slug, payload.model_dump())
+
+
+@router.get("/quizzes/{quiz_id}")
+def get_quiz(
+    quiz_id: str,
+    _current_user: dict = Depends(AdminOrInstructor),
+    admin=Depends(get_admin_service),
+):
+    """
+    This returns one quiz payload for the quiz builder.
+    """
+
+    return admin.get_quiz_detail(quiz_id)
+
+
+@router.put("/quizzes/{quiz_id}")
+def put_quiz(
+    quiz_id: str,
+    payload: AdminQuizUpdateRequest,
+    _current_user: dict = Depends(AdminOrInstructor),
+    admin=Depends(get_admin_service),
+):
+    """
+    This updates quiz questions, options, rewards, and course-content metadata.
+    """
+
+    return admin.update_quiz_detail(quiz_id, payload.model_dump())
+
+
+@router.delete("/quizzes/{quiz_id}")
+def delete_quiz(
+    quiz_id: str,
+    _current_user: dict = Depends(AdminOrInstructor),
+    admin=Depends(get_admin_service),
+):
+    """
+    This deletes a quiz and its linked quiz-type content record.
+    """
+
+    return admin.delete_quiz_detail(quiz_id)

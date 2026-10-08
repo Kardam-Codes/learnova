@@ -1,0 +1,1457 @@
+[
+  {
+    "method": "GET",
+    "path": "/",
+    "operation_id": "root__get",
+    "documented_responses": [
+      "200"
+    ],
+    "parameters": [],
+    "request_body": null
+  },
+  {
+    "method": "GET",
+    "path": "/health",
+    "operation_id": "health_health_get",
+    "documented_responses": [
+      "200"
+    ],
+    "parameters": [],
+    "request_body": null
+  },
+  {
+    "method": "GET",
+    "path": "/db/health",
+    "operation_id": "db_health_db_health_get",
+    "documented_responses": [
+      "200"
+    ],
+    "parameters": [],
+    "request_body": null
+  },
+  {
+    "method": "POST",
+    "path": "/auth/register",
+    "operation_id": "register_auth_register_post",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [],
+    "request_body": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/RegisterRequest"
+          }
+        }
+      },
+      "required": true
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/auth/login",
+    "operation_id": "login_auth_login_post",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [],
+    "request_body": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/LoginRequest"
+          }
+        }
+      },
+      "required": true
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/auth/google",
+    "operation_id": "google_login_auth_google_post",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [],
+    "request_body": {
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/GoogleAuthRequest"
+          }
+        }
+      },
+      "required": true
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/auth/check-email",
+    "operation_id": "check_email_auth_check_email_get",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "email",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "email",
+          "title": "Email"
+        }
+      }
+    ],
+    "request_body": null
+  },
+  {
+    "method": "GET",
+    "path": "/auth/me",
+    "operation_id": "me_auth_me_get",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": null
+  },
+  {
+    "method": "GET",
+    "path": "/courses",
+    "operation_id": "list_courses_courses_get",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": null
+  },
+  {
+    "method": "POST",
+    "path": "/courses/{course_slug}/enroll",
+    "operation_id": "post_course_enrollment_courses__course_slug__enroll_post",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "course_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Course Slug"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": null
+  },
+  {
+    "method": "GET",
+    "path": "/courses/{course_slug}",
+    "operation_id": "get_course_courses__course_slug__get",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "course_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Course Slug"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": null
+  },
+  {
+    "method": "GET",
+    "path": "/courses/{course_slug}/reviews",
+    "operation_id": "get_course_reviews_courses__course_slug__reviews_get",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "course_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Course Slug"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": null
+  },
+  {
+    "method": "POST",
+    "path": "/courses/{course_slug}/reviews",
+    "operation_id": "post_course_review_courses__course_slug__reviews_post",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "course_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Course Slug"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": {
+      "required": true,
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/ReviewSubmissionRequest"
+          }
+        }
+      }
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/courses/{course_slug}/payments/order",
+    "operation_id": "post_payment_order_courses__course_slug__payments_order_post",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "course_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Course Slug"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": null
+  },
+  {
+    "method": "POST",
+    "path": "/courses/{course_slug}/payments/verify",
+    "operation_id": "post_payment_verification_courses__course_slug__payments_verify_post",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "course_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Course Slug"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": {
+      "required": true,
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/PaymentVerificationRequest"
+          }
+        }
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/courses/{course_slug}/content/{content_slug}",
+    "operation_id": "get_course_content_courses__course_slug__content__content_slug__get",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "course_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Course Slug"
+        }
+      },
+      {
+        "name": "content_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Content Slug"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": null
+  },
+  {
+    "method": "POST",
+    "path": "/courses/{course_slug}/content/{content_slug}/progress",
+    "operation_id": "post_course_content_progress_courses__course_slug__content__content_slug__progress_post",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "course_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Course Slug"
+        }
+      },
+      {
+        "name": "content_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Content Slug"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": {
+      "required": true,
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/ContentProgressUpdateRequest"
+          }
+        }
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/courses/{course_slug}/quizzes/{content_slug}",
+    "operation_id": "get_quiz_courses__course_slug__quizzes__content_slug__get",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "course_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Course Slug"
+        }
+      },
+      {
+        "name": "content_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Content Slug"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": null
+  },
+  {
+    "method": "POST",
+    "path": "/courses/{course_slug}/quizzes/{content_slug}/attempts",
+    "operation_id": "post_quiz_attempt_courses__course_slug__quizzes__content_slug__attempts_post",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "course_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Course Slug"
+        }
+      },
+      {
+        "name": "content_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Content Slug"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": {
+      "required": true,
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/QuizAttemptRequest"
+          }
+        }
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/admin/reports/course-progress",
+    "operation_id": "get_course_progress_report_admin_reports_course_progress_get",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Status"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": null
+  },
+  {
+    "method": "GET",
+    "path": "/admin/users",
+    "operation_id": "get_admin_users_admin_users_get",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "roles",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Roles"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": null
+  },
+  {
+    "method": "POST",
+    "path": "/admin/uploads",
+    "operation_id": "upload_admin_file_admin_uploads_post",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": {
+      "required": true,
+      "content": {
+        "multipart/form-data": {
+          "schema": {
+            "$ref": "#/components/schemas/Body_upload_admin_file_admin_uploads_post"
+          }
+        }
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/admin/courses",
+    "operation_id": "get_admin_courses_admin_courses_get",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": null
+  },
+  {
+    "method": "POST",
+    "path": "/admin/courses",
+    "operation_id": "post_admin_course_admin_courses_post",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": {
+      "required": true,
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/CourseCreateRequest"
+          }
+        }
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/admin/courses/{course_slug}",
+    "operation_id": "get_admin_course_detail_admin_courses__course_slug__get",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "course_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Course Slug"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": null
+  },
+  {
+    "method": "PUT",
+    "path": "/admin/courses/{course_slug}",
+    "operation_id": "put_admin_course_admin_courses__course_slug__put",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "course_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Course Slug"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": {
+      "required": true,
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/CourseUpdateRequest"
+          }
+        }
+      }
+    }
+  },
+  {
+    "method": "DELETE",
+    "path": "/admin/courses/{course_slug}",
+    "operation_id": "delete_course_admin_courses__course_slug__delete",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "course_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Course Slug"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": null
+  },
+  {
+    "method": "POST",
+    "path": "/admin/courses/{course_slug}/publish",
+    "operation_id": "publish_course_admin_courses__course_slug__publish_post",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "course_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Course Slug"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": {
+      "required": true,
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/PublishCourseRequest"
+          }
+        }
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/admin/courses/{course_slug}/attendees",
+    "operation_id": "get_attendees_admin_courses__course_slug__attendees_get",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "course_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Course Slug"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": null
+  },
+  {
+    "method": "POST",
+    "path": "/admin/courses/{course_slug}/attendees",
+    "operation_id": "post_attendees_admin_courses__course_slug__attendees_post",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "course_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Course Slug"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": {
+      "required": true,
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/AddAttendeesRequest"
+          }
+        }
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/admin/courses/{course_slug}/content",
+    "operation_id": "get_course_content_list_admin_courses__course_slug__content_get",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "course_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Course Slug"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": null
+  },
+  {
+    "method": "POST",
+    "path": "/admin/courses/{course_slug}/content",
+    "operation_id": "post_course_content_admin_courses__course_slug__content_post",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "course_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Course Slug"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": {
+      "required": true,
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/AdminContentCreateRequest"
+          }
+        }
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/admin/content/{content_slug}",
+    "operation_id": "get_content_admin_content__content_slug__get",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "content_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Content Slug"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": null
+  },
+  {
+    "method": "PUT",
+    "path": "/admin/content/{content_slug}",
+    "operation_id": "put_content_admin_content__content_slug__put",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "content_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Content Slug"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": {
+      "required": true,
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/AdminContentUpdateRequest"
+          }
+        }
+      }
+    }
+  },
+  {
+    "method": "DELETE",
+    "path": "/admin/content/{content_slug}",
+    "operation_id": "delete_content_admin_content__content_slug__delete",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "content_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Content Slug"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": null
+  },
+  {
+    "method": "GET",
+    "path": "/admin/courses/{course_slug}/quizzes",
+    "operation_id": "get_quizzes_admin_courses__course_slug__quizzes_get",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "course_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Course Slug"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": null
+  },
+  {
+    "method": "POST",
+    "path": "/admin/courses/{course_slug}/quizzes",
+    "operation_id": "post_quiz_admin_courses__course_slug__quizzes_post",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "course_slug",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Course Slug"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": {
+      "required": true,
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/AdminQuizCreateRequest"
+          }
+        }
+      }
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/admin/quizzes/{quiz_id}",
+    "operation_id": "get_quiz_admin_quizzes__quiz_id__get",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "quiz_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Quiz Id"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": null
+  },
+  {
+    "method": "PUT",
+    "path": "/admin/quizzes/{quiz_id}",
+    "operation_id": "put_quiz_admin_quizzes__quiz_id__put",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "quiz_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Quiz Id"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": {
+      "required": true,
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/AdminQuizUpdateRequest"
+          }
+        }
+      }
+    }
+  },
+  {
+    "method": "DELETE",
+    "path": "/admin/quizzes/{quiz_id}",
+    "operation_id": "delete_quiz_admin_quizzes__quiz_id__delete",
+    "documented_responses": [
+      "200",
+      "422"
+    ],
+    "parameters": [
+      {
+        "name": "quiz_id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "title": "Quiz Id"
+        }
+      },
+      {
+        "name": "authorization",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Authorization"
+        }
+      }
+    ],
+    "request_body": null
+  }
+]
